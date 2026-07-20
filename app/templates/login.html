@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}התחברות{% endblock %}
+{% block content %}
+<div class="card auth-card">
+    <h1>התחברות</h1>
+    <form method="post" action="/login">
+        <label>אימייל</label>
+        <input type="email" name="email" value="{{ email or '' }}" required autofocus>
+
+        <label>סיסמא</label>
+        <input type="password" name="password" required>
+
+        <button type="submit" class="btn-primary">התחבר</button>
+    </form>
+    <p class="muted">אין לך חשבון? <a href="/signup">הרשמה</a></p>
+</div>
+{% endblock %}

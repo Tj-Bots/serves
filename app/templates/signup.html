@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}הרשמה{% endblock %}
+{% block content %}
+<div class="card auth-card">
+    <h1>יצירת חשבון</h1>
+    <form method="post" action="/signup">
+        <label>אימייל</label>
+        <input type="email" name="email" value="{{ email or '' }}" required autofocus>
+
+        <label>סיסמא (לפחות 8 תווים)</label>
+        <input type="password" name="password" minlength="8" required>
+
+        <label>אימות סיסמא</label>
+        <input type="password" name="password_confirm" minlength="8" required>
+
+        <label class="checkbox-row">
+            <input type="checkbox" name="accept_terms" required>
+            קראתי ואני מאשר/ת את <a href="{{ terms_url }}" target="_blank" rel="noopener">תקנון השירות</a>
+        </label>
+
+        <button type="submit" class="btn-primary">הרשמה</button>
+    </form>
+    <p class="muted">כבר יש לך חשבון? <a href="/login">התחברות</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}אפליקציה חדשה{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>יצירת בוט טלגרם חדש</h1>
+    <form method="post" action="/apps/new">
+        <label>שם האפליקציה</label>
+        <input type="text" name="name" placeholder="הבוט שלי" required autofocus>
+
+        <label>קישור לריפו ב-GitHub</label>
+        <input type="text" name="repo_url" placeholder="https://github.com/user/my-bot" required>
+
+        <label>שם קובץ הספריות</label>
+        <input type="text" name="requirements_file" value="requirements.txt">
+
+        <label>פקודת הרצה</label>
+        <input type="text" name="run_command" placeholder="python bot.py" required>
+
+        <p class="hint">אחרי היצירה תוכל להגדיר משתני סביבה (כמו קובץ .env) מתוך עמוד האפליקציה.</p>
+
+        <button type="submit" class="btn-primary">יצירה ופריסה</button>
+    </form>
+</div>
+{% endblock %}

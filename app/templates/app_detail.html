@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ app.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ app.status.value }}</span></h1>
+        <div class="app-repo">{{ app.repo_url }}</div>
+    </div>
+    <div class="actions">
+        <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">
+            <button type="submit" class="btn-primary">↻ פריסה מחדש</button>
+        </form>
+        <form method="post" action="/apps/{{ app.id }}/stop" style="display:inline">
+            <button type="submit" class="btn-ghost">⏹ עצירה</button>
+        </form>
+        <form method="post" action="/apps/{{ app.id }}/delete" style="display:inline" onsubmit="return confirm('למחוק את האפליקציה לצמיתות?');">
+            <button type="submit" class="btn-danger">🗑 מחיקה</button>
+        </form>
+    </div>
+</div>
+
+{% if app.last_error %}
+<div class="card error-box">
+    <strong>שגיאה אחרונה:</strong>
+    <pre>{{ app.last_error }}</pre>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>לוגים בזמן אמת</h2>
+    <div id="terminal" class="terminal">
+        {% for line in log_tail %}<div class="log-line">{{ line }}</div>{% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>הגדרות</h2>
+    <form method="post" action="/apps/{{ app.id }}/env">
+        <label>קובץ ספריות</label>
+        <input type="text" value="{{ app.requirements_file }}" disabled>
+        <label>פקודת הרצה</label>
+        <input type="text" value="{{ app.run_command }}" disabled>
+
+        <label>משתני סביבה (כמו קובץ .env, שורה = KEY=VALUE)</label>
+        <textarea name="env_text" rows="6" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-...">{{ env_text }}</textarea>
+        <p class="hint">אחרי שמירה יש ללחוץ "פריסה מחדש" כדי שהשינוי ייכנס לתוקף.</p>
+        <button type="submit" class="btn-primary">שמירת משתני סביבה</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block body_end %}
+<script>
+  window.SERVES_APP_ID = {{ app.id }};
+</script>
+<script src="/static/js/logs.js"></script>
+{% endblock %}

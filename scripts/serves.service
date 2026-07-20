@@ -1,0 +1,20 @@
+[Unit]
+Description=Serves - Telegram bot hosting platform
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/serves
+EnvironmentFile=/opt/serves/.env
+ExecStart=/opt/serves/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+Restart=always
+RestartSec=5
+
+# הפלטפורמה עצמה (לא בוטי המשתמשים!) רצה כ-root כי היא צריכה גישה ל-
+# docker.sock ולניהול תיקיות/קונטיינרים עבור כל המשתמשים. בוטי המשתמשים
+# עצמם רצים תמיד כ-non-root בתוך קונטיינרים מבודדים (ראה docker/base.Dockerfile).
+User=root
+
+[Install]
+WantedBy=multi-user.target
