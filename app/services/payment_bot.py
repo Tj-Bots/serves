@@ -56,7 +56,24 @@ async def _handle_start(client: httpx.AsyncClient, message: dict) -> None:
     payload = parts[1].strip() if len(parts) > 1 else ""
 
     if not payload.startswith("pay_"):
-        await _call(client, "sendMessage", chat_id=chat_id, text="👋 Welcome to the Serves payment bot.")
+        reply_markup = None
+        if settings.PUBLIC_BASE_URL:
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": "Open Serves", "url": settings.PUBLIC_BASE_URL.rstrip("/") + "/billing"}
+                ]]
+            }
+        await _call(
+            client, "sendMessage", chat_id=chat_id,
+            text=(
+                "👋 This is the official payment bot for Serves (teleboss.online).\n\n"
+                "It only handles plan upgrades paid with Telegram Stars - it doesn't "
+                "host or run anything itself. To upgrade, open the Billing page on "
+                "the website and tap Upgrade - you'll be sent back here automatically "
+                "with a payment link."
+            ),
+            reply_markup=reply_markup,
+        )
         return
 
     pay_code = payload[len("pay_"):]

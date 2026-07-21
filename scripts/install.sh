@@ -39,7 +39,7 @@ fi
 
 echo "==> [3/8] מעתיק את הקוד ל-$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
-rsync -a --delete --exclude='.git' --exclude='data' --exclude='venv' "$REPO_DIR/" "$INSTALL_DIR/"
+rsync -a --delete --exclude='.git' --exclude='data' --exclude='venv' --exclude='.env' "$REPO_DIR/" "$INSTALL_DIR/"
 mkdir -p "$INSTALL_DIR/data/apps" "$INSTALL_DIR/data/logs"
 
 echo "==> [4/8] יוצר סביבת Python וירטואלית ומתקין תלויות"

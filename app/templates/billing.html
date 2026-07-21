@@ -13,7 +13,8 @@
 
 <div class="plans-list">
     {% for key, plan in plans.items() %}
-    <details class="env-details plan-card{% if user.plan == key %} plan-card-current{% endif %}"{% if key != user.plan %} open{% endif %}>
+    <details class="plan-card{% if user.plan == key %} plan-card-current{% endif %}{% if plan.stars > 0 and user.plan != key %} plan-card-highlight{% endif %}">
+        {% if plan.stars > 0 and user.plan != key %}<span class="plan-card-ribbon">{{ icons.icon('star') }} {{ t('billing.recommended') }}</span>{% endif %}
         <summary>
             <span class="plan-card-title">
                 <span class="plan-name">{{ t('plan.' ~ key) }}</span>
@@ -22,7 +23,7 @@
                 {% endif %}
             </span>
             <span class="plan-card-right">
-                <span class="plan-price">
+                <span class="plan-price{% if plan.stars > 0 %} plan-price-stars{% endif %}">
                     {% if plan.stars > 0 %}
                         {{ icons.icon('star') }} {{ plan.stars|thousands }} {{ t('billing.stars_unit') }}
                     {% else %}
@@ -32,20 +33,16 @@
                 {{ icons.icon('chevron') }}
             </span>
         </summary>
-        <div class="env-details-body plan-card-body">
+        <div class="plan-card-body">
             <p class="plan-included-title">{{ t('billing.included_title') }}</p>
             <ul class="plan-included-list">
-                <li>{{ t('billing.included_apps', max_apps=plan.max_apps) }}</li>
-                <li>{{ t('billing.included_resources', memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</li>
+                <li>{{ icons.icon('check') }} {{ t('billing.included_apps', max_apps=plan.max_apps) }}</li>
+                <li>{{ icons.icon('check') }} {{ t('billing.included_resources', memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</li>
             </ul>
-            {% if user.plan != key and plan.stars > 0 %}
-                {% if payments_enabled %}
-                    <form method="post" action="/billing/upgrade/{{ key }}">
-                        <button type="submit" class="btn-primary">{{ icons.icon('star') }} {{ t('billing.upgrade_button') }}</button>
-                    </form>
-                {% else %}
-                    <p class="muted">{{ t('billing.not_configured') }}</p>
-                {% endif %}
+            {% if user.plan != key and plan.stars > 0 and payments_enabled %}
+                <form method="post" action="/billing/upgrade/{{ key }}">
+                    <button type="submit" class="btn-primary">{{ icons.icon('star') }} {{ t('billing.upgrade_button') }}</button>
+                </form>
             {% endif %}
         </div>
     </details>
