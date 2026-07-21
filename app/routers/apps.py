@@ -30,6 +30,16 @@ def _max_apps(user: User) -> int:
     return PLANS.get(user.plan, PLANS["free"])["max_apps"]
 
 
+def _limit_reached_response(request: Request, user: User, max_apps: int) -> RedirectResponse:
+    """כשמגיעים למגבלת האפליקציות: אם יש תוכנית בתשלום זמינה ומוגדרת,
+    שולחים לעמוד השדרוג במקום סתם להחזיר לדשבורד עם הודעת שגיאה."""
+    if settings.PAYMENT_BOT_USERNAME and user.plan != "pro":
+        flash(request, "apps.flash.limit_upgrade_hint", "error", max_apps=max_apps)
+        return RedirectResponse("/billing", status_code=303)
+    flash(request, "apps.flash.limit_with_hint", "error", max_apps=max_apps)
+    return RedirectResponse("/dashboard", status_code=303)
+
+
 def _check_deploy_rate_limit(request: Request, user: User) -> bool:
     """True אם מותר להמשיך. אחרת שם flash ומחזיר False - הקורא צריך
     להחזיר redirect בעצמו (כדי לשמור על הנתיב הנכון)."""
@@ -83,8 +93,7 @@ def new_app_form(request: Request, user: User = Depends(get_current_verified_use
     max_apps = _max_apps(user)
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= max_apps:
-        flash(request, "apps.flash.limit_with_hint", "error", max_apps=max_apps)
-        return RedirectResponse("/dashboard", status_code=303)
+        return _limit_reached_response(request, user, max_apps)
     return render(request, "new_app.html", user=user)
 
 
@@ -103,8 +112,7 @@ async def create_app(
     max_apps = _max_apps(user)
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= max_apps:
-        flash(request, "apps.flash.limit", "error", max_apps=max_apps)
-        return RedirectResponse("/dashboard", status_code=303)
+        return _limit_reached_response(request, user, max_apps)
 
     if not _check_deploy_rate_limit(request, user):
         return RedirectResponse("/apps/new", status_code=303)
