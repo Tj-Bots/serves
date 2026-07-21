@@ -46,3 +46,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     if not user:
         raise AuthRedirect("/login")
     return user
+
+
+def get_current_verified_user(user: User = Depends(get_current_user)) -> User:
+    if not user.is_verified:
+        raise AuthRedirect("/verify-email")
+    return user

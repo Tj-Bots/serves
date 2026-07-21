@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Re
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_verified_user
 from app.config import settings
 from app.database import get_db
 from app.models import AppStatus, BotApp, User
@@ -33,7 +33,7 @@ def index(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/dashboard")
-def dashboard(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def dashboard(request: Request, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     apps = db.query(BotApp).filter(BotApp.user_id == user.id).order_by(BotApp.created_at.desc()).all()
     return render(
         request,
@@ -46,7 +46,7 @@ def dashboard(request: Request, user: User = Depends(get_current_user), db: Sess
 
 
 @router.get("/apps/new")
-def new_app_form(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def new_app_form(request: Request, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= settings.FREE_MAX_APPS:
         flash(request, f"התוכנית החינמית מוגבלת ל-{settings.FREE_MAX_APPS} אפליקציה. מחק אפליקציה קיימת כדי ליצור חדשה.", "error")
@@ -62,7 +62,7 @@ async def create_app(
     repo_url: str = Form(...),
     requirements_file: str = Form("requirements.txt"),
     run_command: str = Form(...),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
 ):
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
@@ -105,7 +105,7 @@ async def create_app(
 
 
 @router.get("/apps/{app_id}")
-def app_detail(request: Request, app_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def app_detail(request: Request, app_id: int, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     app = _get_owned_app(db, user, app_id)
     log_tail = log_broadcaster.read_tail(app_id)
     env_text = "\n".join(f"{k}={v}" for k, v in (app.env_vars or {}).items())
@@ -116,7 +116,7 @@ def app_detail(request: Request, app_id: int, user: User = Depends(get_current_u
 async def redeploy(
     app_id: int,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
 ):
     app = _get_owned_app(db, user, app_id)
@@ -126,14 +126,14 @@ async def redeploy(
 
 
 @router.post("/apps/{app_id}/stop")
-def stop(app_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def stop(app_id: int, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     app = _get_owned_app(db, user, app_id)
     deploy_service.stop_app(app)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 
 @router.post("/apps/{app_id}/delete")
-def delete(app_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def delete(app_id: int, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     app = _get_owned_app(db, user, app_id)
     deploy_service.teardown_app(app)
     db.delete(app)
@@ -146,7 +146,7 @@ def update_env(
     request: Request,
     app_id: int,
     env_text: str = Form(""),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
 ):
     app = _get_owned_app(db, user, app_id)

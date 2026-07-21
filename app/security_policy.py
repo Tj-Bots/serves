@@ -66,7 +66,7 @@ def check_requirements(requirements_text: str) -> None:
     blocked = [n for n in names if n in BLOCKED_PACKAGES]
     if blocked:
         raise PolicyViolation(
-            "לא ניתן לפרוס: הספריות הבאות אסורות לשימוש בתוכנית זו (ffmpeg/torrent): "
+            "Cannot deploy: the following packages are not allowed on this plan (ffmpeg/torrent): "
             + ", ".join(sorted(set(blocked)))
         )
 
@@ -75,5 +75,6 @@ def check_run_command(run_command: str) -> None:
     for pattern in BLOCKED_COMMAND_PATTERNS:
         if re.search(pattern, run_command, re.IGNORECASE):
             raise PolicyViolation(
-                "פקודת ההרצה מכילה ביטוי חסום (התקנת חבילות מערכת/הרשאות מוגברות/טורנט אסורים)."
+                "The run command contains a blocked pattern (system package installs, "
+                "privilege escalation, and torrents are not allowed)."
             )

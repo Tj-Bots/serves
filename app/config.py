@@ -36,6 +36,16 @@ class Settings:
 
     DISABLE_DOCKER: bool = _bool("DISABLE_DOCKER", False)
 
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "Serves <no-reply@boss-server-bot.online>")
+    SMTP_USE_TLS: bool = _bool("SMTP_USE_TLS", True)
+
+    VERIFICATION_CODE_TTL_MINUTES: int = int(os.getenv("VERIFICATION_CODE_TTL_MINUTES", "10"))
+    VERIFICATION_RESEND_COOLDOWN_SECONDS: int = int(os.getenv("VERIFICATION_RESEND_COOLDOWN_SECONDS", "60"))
+
 
 settings = Settings()
 

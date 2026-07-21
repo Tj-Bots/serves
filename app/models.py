@@ -20,6 +20,11 @@ class User(Base):
     accepted_terms_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
 
+    is_verified: Mapped[bool] = mapped_column(default=False)
+    verification_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    verification_code_expires_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    verification_sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+
     apps: Mapped[list["BotApp"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 

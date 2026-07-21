@@ -55,10 +55,10 @@ def _watch(app_id: int, handle: str, loop: asyncio.AbstractEventLoop) -> None:
     def on_exit(code: int) -> None:
         if code == 0:
             _set_status(app_id, AppStatus.STOPPED)
-            _emit(app_id, loop, "[serves] התהליך הסתיים (קוד יציאה 0)")
+            _emit(app_id, loop, "[serves] process exited (exit code 0)")
         else:
             _set_status(app_id, AppStatus.FAILED, error=f"process exited with code {code}")
-            _emit(app_id, loop, f"[serves] התהליך נכשל (קוד יציאה {code})")
+            _emit(app_id, loop, f"[serves] process failed (exit code {code})")
 
     runtime.stream_logs(handle, on_line, on_exit)
 
@@ -88,7 +88,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
     code_dir = app_code_dir(app_id)
     try:
-        emit(f"[serves] משכפל {repo_url} ...")
+        emit(f"[serves] cloning {repo_url} ...")
         if code_dir.exists():
             shutil.rmtree(code_dir)
         code_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +102,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         for out_line in (result.stdout + result.stderr).splitlines():
             emit(out_line)
         if result.returncode != 0:
-            raise RuntimeError("git clone נכשל - בדוק שהקישור לריפו ציבורי ותקין")
+            raise RuntimeError("git clone failed - check that the repo link is public and correct")
 
         req_path = code_dir / requirements_file
         if req_path.exists():
@@ -110,20 +110,20 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         check_run_command(run_command)
 
         runtime.ensure_ready()
-        emit("[serves] מתקין תלויות ומריץ ...")
+        emit("[serves] installing dependencies and starting ...")
         handle = runtime.start(app_id, code_dir, requirements_file, run_command, env_vars)
 
         _set_status(app_id, AppStatus.RUNNING, container_id=handle)
-        emit("[serves] האפליקציה רצה ברקע")
+        emit("[serves] application is running in the background")
 
         threading.Thread(target=_watch, args=(app_id, handle, loop), daemon=True).start()
 
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
-        emit(f"[serves] שגיאה: {exc.message}")
+        emit(f"[serves] ERROR: {exc.message}")
     except Exception as exc:  # noqa: BLE001 - כל כשל בפריסה מדווח למשתמש בלוג
         _set_status(app_id, AppStatus.FAILED, error=str(exc))
-        emit(f"[serves] שגיאה: {exc}")
+        emit(f"[serves] ERROR: {exc}")
 
 
 def stop_app(app: BotApp) -> None:

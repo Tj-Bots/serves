@@ -7,7 +7,8 @@ ffmpeg או כל חבילת מערכת אחרת. אפשר רק להתקין ספ
 ## איך זה עובד
 
 1. משתמש נרשם עם מייל+סיסמא ומאשר תקנון (מקושר מ-`TERMS_URL`, כרגע
-   `https://boss-server-bot.online/תקנון.html`).
+   `https://boss-server-bot.online/תקנון.html`), ומאמת את המייל עם קוד בן
+   6 ספרות שנשלח אליו (ראו "אימות אימייל" למטה).
 2. בתוכנית החינמית אפשר ליצור אפליקציה אחת (בוט טלגרם).
 3. יוצרים אפליקציה עם: קישור לריפו ב-GitHub, שם קובץ הספריות (ברירת מחדל
    `requirements.txt`), ופקודת הרצה (למשל `python bot.py`).
@@ -41,6 +42,40 @@ ffmpeg או כל חבילת מערכת אחרת. אפשר רק להתקין ספ
 עדיין לא נאכפת כ"hard quota" ברמת מערכת הקבצים (למשל loopback device
 עם `mkfs.ext4` בגודל קבוע) - כרגע היא רק ערך תצורה. אם רוצים אכיפה
 אמיתית ברמת דיסק, זה השלב הבא (ראה TODO בקוד `docker_manager.py`).
+
+## אימות אימייל (SMTP)
+
+בהרשמה נשלח קוד בן 6 ספרות שתקף ל-10 דקות (`VERIFICATION_CODE_TTL_MINUTES`),
+ובלעדיו אי אפשר להיכנס לדשבורד או ליצור אפליקציות. כדי שהמייל *באמת* יישלח
+יש להגדיר ב-`/opt/serves/.env`:
+
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=<App Password - לא הסיסמא הרגילה של Gmail>
+SMTP_FROM=Serves <no-reply@boss-server-bot.online>
+```
+
+ל-Gmail חובה ליצור "App Password" ייעודי (לא הסיסמא הרגילה) דרך הגדרות
+האבטחה של החשבון. אחרי שינוי `.env`: `sudo systemctl restart serves`.
+
+אם `SMTP_HOST` נשאר ריק, הקוד לא נשלח בפועל אלא רק נכתב ללוגים של השרת
+(`journalctl -u serves -f`) - שימושי לבדיקות, לא לפרודקשן.
+
+## עדכון מותקנת קיימת
+
+אם כבר התקנת גרסה קודמת (בלי אימות אימייל) ויש לך `/opt/serves/data/serves.db`
+ישן - הטבלאות החדשות (`is_verified` וכו') לא ייווצרו אוטומטית בתוך טבלה
+קיימת (אין כאן migrations, רק `create_all`). הכי פשוט בשלב הזה (לפני
+שיש משתמשים אמיתיים):
+
+```bash
+cd ~/serves && git pull        # למשוך את השינויים האחרונים לתיקיית המקור
+sudo systemctl stop serves
+sudo rm /opt/serves/data/serves.db
+sudo bash scripts/install.sh   # מעתיק את הקוד המעודכן ל-/opt/serves ומפעיל מחדש
+```
 
 ## דרישות
 

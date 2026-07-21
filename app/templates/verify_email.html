@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}אימות אימייל{% endblock %}
+{% block content %}
+<div class="card auth-card">
+    <h1>אימות אימייל</h1>
+    <p class="muted">שלחנו קוד בן 6 ספרות לכתובת <strong>{{ user.email }}</strong>. הזן אותו כאן כדי להמשיך.</p>
+    <form method="post" action="/verify-email">
+        <label>קוד אימות</label>
+        <input type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autofocus required>
+        <button type="submit" class="btn-primary">אימות</button>
+    </form>
+    <form method="post" action="/verify-email/resend" style="margin-top: 14px;">
+        <button type="submit" class="btn-ghost">שליחת קוד חדש</button>
+    </form>
+    <p class="muted">נרשמת בטעות עם מייל לא נכון? <a href="/logout">התנתקות</a></p>
+</div>
+{% endblock %}

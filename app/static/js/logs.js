@@ -21,13 +21,14 @@
 
     function updateStatusFromLine(text) {
         if (!statusBadge) return;
-        if (text.includes("האפליקציה רצה ברקע")) {
+        const lower = text.toLowerCase();
+        if (lower.includes("application is running")) {
             statusBadge.textContent = "running";
             statusBadge.className = "badge badge-running";
-        } else if (text.includes("קוד יציאה 0")) {
+        } else if (lower.includes("exit code 0")) {
             statusBadge.textContent = "stopped";
             statusBadge.className = "badge badge-stopped";
-        } else if (text.toLowerCase().includes("שגיאה") || text.includes("נכשל")) {
+        } else if (lower.includes("error") || lower.includes("failed")) {
             statusBadge.textContent = "failed";
             statusBadge.className = "badge badge-failed";
         }
