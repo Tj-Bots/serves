@@ -1,8 +1,26 @@
 {% extends "base.html" %}
 {% block title %}{{ t('account.title') }}{% endblock %}
 {% block content %}
+{% import "_icons.html" as icons %}
 <h1>{{ t('account.title') }}</h1>
-<p class="muted">{{ user.email }}</p>
+<p class="muted">{{ user.email }} · {{ t('account.plan_label') }}: {{ t('plan.' ~ user.plan) }}</p>
+
+<div class="card">
+    <h2>{{ t('account.name_title') }}</h2>
+    <form method="post" action="/account/name">
+        <div class="form-row-2">
+            <div>
+                <label>{{ t('auth.signup.first_name') }}</label>
+                <input type="text" name="first_name" value="{{ user.first_name or '' }}" required>
+            </div>
+            <div>
+                <label>{{ t('auth.signup.last_name') }}</label>
+                <input type="text" name="last_name" value="{{ user.last_name or '' }}" required>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">{{ t('account.save_name') }}</button>
+    </form>
+</div>
 
 <div class="card">
     <h2>{{ t('account.change_password_title') }}</h2>

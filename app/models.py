@@ -16,6 +16,8 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     accepted_terms_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
@@ -24,6 +26,13 @@ class User(Base):
     verification_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
     verification_code_expires_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
     verification_sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+
+    password_reset_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    password_reset_code_expires_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    password_reset_sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+
+    signup_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    plan: Mapped[str] = mapped_column(String(20), default="free")
 
     apps: Mapped[list["BotApp"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
@@ -58,3 +67,23 @@ class BotApp(Base):
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     owner: Mapped["User"] = relationship(back_populates="apps")
+
+
+class PurchaseStatus(str, enum.Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    EXPIRED = "expired"
+
+
+class PlanPurchase(Base):
+    __tablename__ = "plan_purchases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    pay_code: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
+    plan_name: Mapped[str] = mapped_column(String(20), nullable=False)
+    stars_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[PurchaseStatus] = mapped_column(Enum(PurchaseStatus), default=PurchaseStatus.PENDING)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
+    paid_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)

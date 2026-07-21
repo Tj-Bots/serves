@@ -60,8 +60,23 @@ class Settings:
     VERIFICATION_RESEND_COOLDOWN_SECONDS: int = int(os.getenv("VERIFICATION_RESEND_COOLDOWN_SECONDS", "60"))
     REQUIRE_EMAIL_VERIFICATION: bool = _bool("REQUIRE_EMAIL_VERIFICATION", True)
 
+    # הגבלות קצב (הגנה בסיסית נגד ניצול לרעה, לא Redis - ראו app/services/rate_limit.py)
+    SIGNUP_IP_MAX_PER_DAY: int = int(os.getenv("SIGNUP_IP_MAX_PER_DAY", "3"))
+    DEPLOY_ACTION_MAX: int = int(os.getenv("DEPLOY_ACTION_MAX", "5"))
+    DEPLOY_ACTION_WINDOW_SECONDS: int = int(os.getenv("DEPLOY_ACTION_WINDOW_SECONDS", "60"))
+
+    # בוט תשלומים נפרד (Telegram Stars) - לא חובה למלא אם אין תוכניות בתשלום
+    PAYMENT_BOT_TOKEN: str = os.getenv("PAYMENT_BOT_TOKEN", "")
+    PAYMENT_BOT_USERNAME: str = os.getenv("PAYMENT_BOT_USERNAME", "")
+
 
 settings = Settings()
+
+# הגדרת התוכניות: מפתח -> (מקסימום אפליקציות, מחיר בכוכבי טלגרם)
+PLANS: dict[str, dict] = {
+    "free": {"max_apps": settings.FREE_MAX_APPS, "stars": 0},
+    "pro": {"max_apps": int(os.getenv("PRO_MAX_APPS", "3")), "stars": int(os.getenv("PRO_PLAN_STARS", "1000"))},
+}
 
 settings.APPS_DIR.mkdir(parents=True, exist_ok=True)
 settings.LOGS_DIR.mkdir(parents=True, exist_ok=True)

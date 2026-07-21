@@ -20,6 +20,25 @@ def hash_password(raw_password: str) -> str:
     return bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+ALLOWED_EMAIL_DOMAINS = {"gmail.com"}
+
+
+def is_allowed_email_domain(email: str) -> bool:
+    if "@" not in email:
+        return False
+    domain = email.rsplit("@", 1)[-1].lower()
+    return domain in ALLOWED_EMAIL_DOMAINS
+
+
+def password_strength_error(password: str) -> str | None:
+    """מחזיר מפתח תרגום לשגיאה אם הסיסמא חלשה מדי, אחרת None."""
+    if len(password) < 8:
+        return "auth.flash.password_too_short"
+    if not any(c.isalpha() for c in password) or not any(c.isdigit() for c in password):
+        return "auth.flash.password_too_weak"
+    return None
+
+
 def verify_password(raw_password: str, password_hash: str) -> bool:
     try:
         return bcrypt.checkpw(raw_password.encode("utf-8"), password_hash.encode("utf-8"))

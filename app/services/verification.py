@@ -4,12 +4,16 @@ import secrets
 
 from app.config import settings
 from app.models import User
-from app.services.email import send_verification_email
+from app.services.email import InvalidRecipientError, send_verification_email
 
 logger = logging.getLogger("serves.verification")
 
 
 def generate_and_send_code(user: User) -> None:
+    """מעלה InvalidRecipientError אם הכתובת נדחתה ע"י שרת ה-SMTP עצמו
+    (הקוראים צריכים לטפל בזה כדי להציג שגיאה ברורה למשתמש) - כשלי
+    תצורה/רשת כלליים אחרים נבלעים בשקט (הקוד עדיין נשמר, אפשר "שליחה
+    חוזרת" אחרי שמתקנים SMTP)."""
     code = f"{secrets.randbelow(1_000_000):06d}"
     now = datetime.datetime.now(datetime.timezone.utc)
     user.verification_code = code
@@ -17,8 +21,9 @@ def generate_and_send_code(user: User) -> None:
     user.verification_sent_at = now
     try:
         send_verification_email(user.email, code)
+    except InvalidRecipientError:
+        raise
     except Exception:
-        # הקוד כבר נשמר על המשתמש - אפשר לנסות "שליחה חוזרת" אחרי שמתקנים SMTP
         logger.error("could not send verification email to %s, code stored for retry", user.email)
 
 
