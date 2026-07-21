@@ -1,4 +1,4 @@
-# Serves
+# TeleBoss
 
 פלטפורמת אחסון לבוטי טלגרם, בסגנון Heroku/Render/Koyeb - עם תוכנית חינמית
 שבה למשתמשים **אין הרשאות root**, אי אפשר להוריד טורנטים, ואי אפשר להתקין
@@ -61,7 +61,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=<App Password - לא הסיסמא הרגילה של Gmail>
-SMTP_FROM=Serves <no-reply@boss-server-bot.online>
+SMTP_FROM=TeleBoss <no-reply@boss-server-bot.online>
 SMTP_USE_TLS=true
 ```
 
@@ -122,7 +122,7 @@ REQUIRE_EMAIL_VERIFICATION=false
 (`my-cool-bot-42`). שמות אפליקציות חייבים להיות ייחודיים גלובלית (לא רק
 מול האפליקציות שלכם, מול כולם), כדי שאף אחד לא "יגנוב" כתובת של מישהו
 אחר. אם האפליקציה לא רצה, או שהיא רצה אבל לא מאזינה בכלל על הפורט הזה
-(למשל כי היא "רק" בוט טלגרם בלי אתר), מוצג דף מיתוג של Serves במקום
+(למשל כי היא "רק" בוט טלגרם בלי אתר), מוצג דף מיתוג של TeleBoss במקום
 שגיאה - ואם זוהה גם טוקן טלגרם, יש שם גם קישור ישיר לבוט.
 
 **שני מצבי כתובת** (בוחר אוטומטית, אין צורך להגדיר):
@@ -193,7 +193,7 @@ BotFather). אם נמצא טוקן תקין, נשלחת בקשת `getMe` ל-Tele
    ```
    Certbot גם יגדיר הפניה אוטומטית מ-HTTP ל-HTTPS.
 
-אחרי זה `https://teleboss.online` יציג את Serves ישירות, בלי `:8000`.
+אחרי זה `https://teleboss.online` יציג את TeleBoss ישירות, בלי `:8000`.
 
 ## עדכון מותקנת קיימת
 

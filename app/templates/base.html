@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Serves{% endblock %} · Serves</title>
+    <title>{% block title %}TeleBoss{% endblock %} · TeleBoss</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script>
         (function () {
@@ -16,7 +16,7 @@
 <body>
     {% import "_icons.html" as icons %}
     <nav class="topnav">
-        <a href="/" class="brand">Serves</a>
+        <a href="/" class="brand">TeleBoss</a>
         {% if user %}
             <a href="/billing" class="plan-pill plan-pill-{{ user.plan }}">{{ t('nav.plan_label') }}: {{ t('plan.' ~ user.plan) }}</a>
         {% endif %}

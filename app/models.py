@@ -94,3 +94,20 @@ class PlanPurchase(Base):
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
     paid_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PromoCode(Base):
+    """קוד מימוש שמעניק תוכנית בתשלום בחינם - נוצר ע"י מנהל דרך פקודת
+    /admin בבוט (ראו app/services/payment_bot.py), ומוממש ע"י משתמש
+    בעמוד /billing (ראו app/routers/billing.py)."""
+
+    __tablename__ = "promo_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    plan_name: Mapped[str] = mapped_column(String(20), nullable=False)
+    max_uses: Mapped[int] = mapped_column(default=1)
+    used_count: Mapped[int] = mapped_column(default=0)
+    created_by_telegram_id: Mapped[int | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)

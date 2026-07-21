@@ -20,7 +20,7 @@ def _html_body(title: str, intro: str, code: str) -> str:
     <tr><td align="center">
       <table role="presentation" width="420" cellpadding="0" cellspacing="0" style="max-width:420px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e6e6e6;">
         <tr><td style="padding:28px 32px 4px;">
-          <span style="font-size:22px;font-weight:800;color:#e0501c;letter-spacing:-0.02em;">Serves</span>
+          <span style="font-size:22px;font-weight:800;color:#e0501c;letter-spacing:-0.02em;">TeleBoss</span>
         </td></tr>
         <tr><td style="padding:8px 32px 0;">
           <h1 style="margin:0 0 8px;font-size:18px;color:#1a1a1a;">{title}</h1>
@@ -82,21 +82,21 @@ def _send(to_email: str, subject: str, text_body: str, html_body: str) -> None:
 
 
 def send_verification_email(to_email: str, code: str) -> None:
-    subject = "Your Serves verification code"
-    intro = f"Use the code below to finish signing up for Serves. It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
+    subject = "Your TeleBoss verification code"
+    intro = f"Use the code below to finish signing up for TeleBoss. It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
     text_body = (
-        f"Your Serves verification code is: {code}\n\n"
+        f"Your TeleBoss verification code is: {code}\n\n"
         f"This code expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes.\n"
-        "If you didn't try to sign up for Serves, you can ignore this email."
+        "If you didn't try to sign up for TeleBoss, you can ignore this email."
     )
     _send(to_email, subject, text_body, _html_body("Verify your email", intro, code))
 
 
 def send_password_reset_email(to_email: str, code: str) -> None:
-    subject = "Your Serves password reset code"
-    intro = f"Use the code below to reset your Serves password. It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
+    subject = "Your TeleBoss password reset code"
+    intro = f"Use the code below to reset your TeleBoss password. It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
     text_body = (
-        f"Your Serves password reset code is: {code}\n\n"
+        f"Your TeleBoss password reset code is: {code}\n\n"
         f"This code expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes.\n"
         "If you didn't request a password reset, you can ignore this email."
     )

@@ -1,6 +1,6 @@
 import secrets
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -8,7 +8,8 @@ from app.auth import get_current_verified_user
 from app.config import PLANS, settings
 from app.database import get_db
 from app.models import PlanPurchase, PurchaseStatus, User
-from app.web_utils import render
+from app.promo import redeem_promo_code
+from app.web_utils import flash, render
 
 router = APIRouter()
 
@@ -22,6 +23,21 @@ def billing_page(request: Request, user: User = Depends(get_current_verified_use
         plans=PLANS,
         payments_enabled=bool(settings.PAYMENT_BOT_USERNAME),
     )
+
+
+@router.post("/billing/redeem")
+def redeem_code(
+    request: Request,
+    code: str = Form(...),
+    user: User = Depends(get_current_verified_user),
+    db: Session = Depends(get_db),
+):
+    error_key = redeem_promo_code(db, code, user)
+    if error_key:
+        flash(request, error_key, "error")
+    else:
+        flash(request, "billing.flash.redeem_success", "success")
+    return RedirectResponse("/billing", status_code=303)
 
 
 @router.post("/billing/upgrade/{plan_name}")

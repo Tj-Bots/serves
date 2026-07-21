@@ -1,5 +1,5 @@
 [Unit]
-Description=Serves - Telegram bot hosting platform
+Description=TeleBoss - Telegram bot hosting platform
 After=network.target docker.service
 Requires=docker.service
 

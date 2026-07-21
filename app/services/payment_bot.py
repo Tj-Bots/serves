@@ -22,9 +22,10 @@ import logging
 import httpx
 from sqlalchemy import func
 
-from app.config import settings
+from app.config import PLANS, settings
 from app.database import SessionLocal
 from app.models import AppStatus, BotApp, PlanPurchase, PurchaseStatus, User
+from app.promo import create_promo_code
 from app.services import deploy as deploy_service
 
 logger = logging.getLogger("serves.payment_bot")
@@ -62,13 +63,13 @@ async def _handle_start(client: httpx.AsyncClient, message: dict) -> None:
         if settings.PUBLIC_BASE_URL:
             reply_markup = {
                 "inline_keyboard": [[
-                    {"text": "Open Serves", "url": settings.PUBLIC_BASE_URL.rstrip("/") + "/billing"}
+                    {"text": "Open TeleBoss", "url": settings.PUBLIC_BASE_URL.rstrip("/") + "/billing"}
                 ]]
             }
         await _call(
             client, "sendMessage", chat_id=chat_id,
             text=(
-                "👋 This is the official payment bot for Serves (teleboss.online).\n\n"
+                "👋 This is the official payment bot for TeleBoss (teleboss.online).\n\n"
                 "It only handles plan upgrades paid with Telegram Stars - it doesn't "
                 "host or run anything itself. To upgrade, open the Billing page on "
                 "the website and tap Upgrade - you'll be sent back here automatically "
@@ -85,7 +86,7 @@ async def _handle_start(client: httpx.AsyncClient, message: dict) -> None:
         if not purchase or purchase.status != PurchaseStatus.PENDING:
             await _call(
                 client, "sendMessage", chat_id=chat_id,
-                text="This payment link is invalid or was already used. Start a new upgrade from the Serves dashboard.",
+                text="This payment link is invalid or was already used. Start a new upgrade from the TeleBoss dashboard.",
             )
             return
         if _is_expired(purchase):
@@ -93,7 +94,7 @@ async def _handle_start(client: httpx.AsyncClient, message: dict) -> None:
             db.commit()
             await _call(
                 client, "sendMessage", chat_id=chat_id,
-                text="This payment link has expired. Start a new upgrade from the Serves dashboard.",
+                text="This payment link has expired. Start a new upgrade from the TeleBoss dashboard.",
             )
             return
 
@@ -104,8 +105,8 @@ async def _handle_start(client: httpx.AsyncClient, message: dict) -> None:
         await _call(
             client, "sendInvoice",
             chat_id=chat_id,
-            title=f"Serves {plan_label} plan",
-            description=f"Upgrade your Serves account to the {plan_label} plan.",
+            title=f"TeleBoss {plan_label} plan",
+            description=f"Upgrade your TeleBoss account to the {plan_label} plan.",
             payload=pay_code,
             provider_token="",  # ריק זה תקין ל-Telegram Stars (XTR)
             currency="XTR",
@@ -175,6 +176,7 @@ ADMIN_MAIN_MENU = {
         [{"text": "📊 Stats", "callback_data": "adm:stats"}],
         [{"text": "👥 Users", "callback_data": "adm:users"}],
         [{"text": "📦 Apps", "callback_data": "adm:apps"}],
+        [{"text": "🎟 Generate code", "callback_data": "adm:codes"}],
     ]
 }
 
@@ -191,7 +193,7 @@ async def _handle_admin_command(client: httpx.AsyncClient, message: dict) -> Non
     chat_id = message["chat"]["id"]
     if not _is_admin(chat_id):
         return
-    await _call(client, "sendMessage", chat_id=chat_id, text="🛠 Serves Admin", reply_markup=ADMIN_MAIN_MENU)
+    await _call(client, "sendMessage", chat_id=chat_id, text="🛠 TeleBoss Admin", reply_markup=ADMIN_MAIN_MENU)
 
 
 async def _send_stats(client: httpx.AsyncClient, chat_id) -> None:
@@ -211,6 +213,43 @@ async def _send_stats(client: httpx.AsyncClient, chat_id) -> None:
         "Plans: " + ", ".join(f"{k}={v}" for k, v in plan_counts.items()),
     ]
     await _call(client, "sendMessage", chat_id=chat_id, text="\n".join(lines), reply_markup=_back_menu())
+
+
+async def _send_code_menu(client: httpx.AsyncClient, chat_id) -> None:
+    rows = [
+        [{"text": f"🎟 Generate {name.capitalize()} code", "callback_data": f"adm:gencode:{name}"}]
+        for name, plan in PLANS.items()
+        if plan["stars"] > 0
+    ]
+    rows.append([{"text": "« Back", "callback_data": "adm:menu"}])
+    await _call(
+        client, "sendMessage", chat_id=chat_id,
+        text="🎟 Generate a single-use redeem code (expires in 30 days) that grants a paid plan for free:",
+        reply_markup={"inline_keyboard": rows},
+    )
+
+
+async def _generate_code(client: httpx.AsyncClient, chat_id, plan_name: str) -> None:
+    plan = PLANS.get(plan_name)
+    if not plan or plan["stars"] <= 0:
+        await _call(client, "sendMessage", chat_id=chat_id, text="Invalid plan.")
+        return
+    db = SessionLocal()
+    try:
+        promo = create_promo_code(db, plan_name, chat_id)
+        code_str = promo.code
+    finally:
+        db.close()
+    await _call(
+        client, "sendMessage", chat_id=chat_id,
+        text=(
+            f"🎟 New {plan_name.capitalize()} code (single-use, expires in 30 days):\n\n"
+            f"`{code_str}`\n\n"
+            "Give this to whoever should redeem it - they enter it on the Billing page of the website."
+        ),
+        parse_mode="Markdown",
+        reply_markup=_back_menu("« Codes", "adm:codes"),
+    )
 
 
 async def _send_users(client: httpx.AsyncClient, chat_id) -> None:
@@ -367,13 +406,17 @@ async def _handle_admin_callback(client: httpx.AsyncClient, query: dict) -> None
         return
 
     if data == "adm:menu":
-        await _call(client, "sendMessage", chat_id=chat_id, text="🛠 Serves Admin", reply_markup=ADMIN_MAIN_MENU)
+        await _call(client, "sendMessage", chat_id=chat_id, text="🛠 TeleBoss Admin", reply_markup=ADMIN_MAIN_MENU)
     elif data == "adm:stats":
         await _send_stats(client, chat_id)
     elif data == "adm:users":
         await _send_users(client, chat_id)
     elif data == "adm:apps":
         await _send_apps(client, chat_id)
+    elif data == "adm:codes":
+        await _send_code_menu(client, chat_id)
+    elif data.startswith("adm:gencode:"):
+        await _generate_code(client, chat_id, data.split(":", 2)[2])
     elif data.startswith("adm:u:"):
         await _send_user_detail(client, chat_id, int(data.split(":")[2]))
     elif data.startswith("adm:ublk:"):

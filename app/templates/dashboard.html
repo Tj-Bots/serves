@@ -2,6 +2,18 @@
 {% import "_icons.html" as icons %}
 {% block title %}{{ t('dashboard.title') }}{% endblock %}
 {% block content %}
+{% if trial_expired %}
+<div class="flash flash-error warning-banner">
+    <span>⏳ {{ t('dashboard.trial_expired_banner') }}</span>
+    {% if payments_enabled %}<a href="/billing" class="btn-primary-sm">{{ icons.icon('star') }} {{ t('billing.upgrade_button') }}</a>{% endif %}
+</div>
+{% elif trial_days_left is not none and trial_days_left <= 3 %}
+<div class="flash flash-info warning-banner">
+    <span>⏳ {{ t('dashboard.trial_ending_banner', days=trial_days_left) }}</span>
+    {% if payments_enabled %}<a href="/billing" class="btn-primary-sm">{{ icons.icon('star') }} {{ t('billing.upgrade_button') }}</a>{% endif %}
+</div>
+{% endif %}
+
 <div class="page-head">
     <h1>{{ t('dashboard.title') }}</h1>
     {% if can_create %}
@@ -12,6 +24,9 @@
 </div>
 
 <p class="muted">{{ t('dashboard.plan_info', plan_name=t('plan.' ~ user.plan), max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</p>
+{% if trial_days_left is not none and not trial_expired and trial_days_left > 3 %}
+<p class="muted">{{ t('dashboard.trial_days_left', days=trial_days_left) }}</p>
+{% endif %}
 
 {% if not apps %}
     <div class="card empty-state">

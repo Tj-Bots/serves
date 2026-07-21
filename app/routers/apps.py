@@ -14,6 +14,7 @@ from app.services import deploy as deploy_service
 from app.services import log_broadcaster
 from app.services import rate_limit
 from app.slugs import RESERVED_SLUGS, slugify
+from app.trial import is_trial_expired, trial_days_remaining
 from app.web_utils import flash, render
 
 router = APIRouter()
@@ -47,6 +48,16 @@ def _limit_reached_response(request: Request, user: User, max_apps: int) -> Redi
         return RedirectResponse("/billing", status_code=303)
     flash(request, "apps.flash.limit_with_hint", "error", max_apps=max_apps)
     return RedirectResponse("/dashboard", status_code=303)
+
+
+def _trial_expired_response(request: Request, user: User, redirect_to: str) -> RedirectResponse:
+    """כשתקופת הניסיון החינמית נגמרה: אם יש תוכנית בתשלום זמינה, שולחים
+    לעמוד השדרוג - אחרת חזרה למקור עם הודעה."""
+    if settings.PAYMENT_BOT_USERNAME:
+        flash(request, "apps.flash.trial_expired_upgrade", "error")
+        return RedirectResponse("/billing", status_code=303)
+    flash(request, "apps.flash.trial_expired", "error")
+    return RedirectResponse(redirect_to, status_code=303)
 
 
 def _check_deploy_rate_limit(request: Request, user: User) -> bool:
@@ -85,6 +96,16 @@ def dashboard(request: Request, user: User = Depends(get_current_verified_user),
     apps = db.query(BotApp).filter(BotApp.user_id == user.id).order_by(BotApp.created_at.desc()).all()
     plan = _plan(user)
     max_apps = plan["max_apps"]
+
+    trial_expired = is_trial_expired(user)
+    if trial_expired:
+        # אכיפה עצלה: כל עוד המשתמש בתוכנית חינמית שפג תוקפה, אין טעם
+        # שהאפליקציות שלו ימשיכו לצרוך משאבים - עוצרים אותן בכל טעינת
+        # דשבורד (עצירה של אפליקציה שכבר עצורה לא עושה כלום, אז זה זול).
+        for app in apps:
+            if app.status == AppStatus.RUNNING:
+                deploy_service.stop_app(app)
+
     return render(
         request,
         "dashboard.html",
@@ -94,14 +115,18 @@ def dashboard(request: Request, user: User = Depends(get_current_verified_user),
         memory_mb=plan["memory_mb"],
         cpu_cores=plan["cpu_cores"],
         disk_mb=plan["disk_mb"],
-        can_create=len(apps) < max_apps,
+        can_create=len(apps) < max_apps and not trial_expired,
         payments_enabled=bool(settings.PAYMENT_BOT_USERNAME),
         can_upgrade=bool(settings.PAYMENT_BOT_USERNAME) and not _is_top_plan(user),
+        trial_expired=trial_expired,
+        trial_days_left=trial_days_remaining(user),
     )
 
 
 @router.get("/apps/new")
 def new_app_form(request: Request, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
+    if is_trial_expired(user):
+        return _trial_expired_response(request, user, "/dashboard")
     max_apps = _max_apps(user)
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= max_apps:
@@ -121,6 +146,9 @@ async def create_app(
     user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
 ):
+    if is_trial_expired(user):
+        return _trial_expired_response(request, user, "/apps/new")
+
     max_apps = _max_apps(user)
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= max_apps:
@@ -214,6 +242,8 @@ async def redeploy(
     app = _get_owned_app(db, user, app_id)
     if not _check_not_suspended(request, app):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
+    if is_trial_expired(user):
+        return _trial_expired_response(request, user, f"/apps/{app_id}")
     if not _check_deploy_rate_limit(request, user):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
     loop = asyncio.get_running_loop()
@@ -239,6 +269,8 @@ async def start(
     app = _get_owned_app(db, user, app_id)
     if not _check_not_suspended(request, app):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
+    if is_trial_expired(user):
+        return _trial_expired_response(request, user, f"/apps/{app_id}")
     if not _check_deploy_rate_limit(request, user):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
     loop = asyncio.get_running_loop()

@@ -34,6 +34,9 @@ class Settings:
     FREE_MEMORY_MB: int = int(os.getenv("FREE_MEMORY_MB", "256"))
     FREE_CPU_CORES: float = float(os.getenv("FREE_CPU_CORES", "0.5"))
     FREE_DISK_MB: int = int(os.getenv("FREE_DISK_MB", "2048"))
+    # אחרי כמה ימים מההרשמה תוכנית חינמית מפסיקה לעבוד (אפליקציות נעצרות
+    # ולא ניתנות להפעלה) עד שדרוג. 0 מבטל את המגבלה (חינם לצמיתות).
+    FREE_TRIAL_DAYS: int = int(os.getenv("FREE_TRIAL_DAYS", "14"))
 
     SANDBOX_NETWORK: str = os.getenv("SANDBOX_NETWORK", "serves_sandbox")
     SANDBOX_SUBNET: str = os.getenv("SANDBOX_SUBNET", "172.30.0.0/24")
@@ -56,7 +59,7 @@ class Settings:
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    SMTP_FROM: str = os.getenv("SMTP_FROM", "Serves <no-reply@boss-server-bot.online>")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "TeleBoss <no-reply@boss-server-bot.online>")
     # STARTTLS (פורט 587, ברירת מחדל) מול SSL מוצפן-מהתחלה (פורט 465).
     # אם 587 חסום ע"י הספק, 465+SSL לרוב עוקף את זה - זו בדיוק השיטה
     # שעובדת בסקריפט ה-PHP שהוכיח שהחיבור לג'ימייל בכלל אפשרי מהשרת.

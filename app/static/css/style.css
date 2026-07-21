@@ -414,90 +414,88 @@ button[type="submit"].btn-primary { margin-top: 16px; }
 .env-details[open] summary .icon { transform: rotate(180deg); }
 .env-details .env-details-body { padding: 0 14px 14px; }
 
-/* ---------- Billing plan cards ---------- */
+/* ---------- Billing plan panels ---------- */
 
-.plans-list { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+    margin-top: 22px;
+    align-items: start;
+}
 
-.plan-card {
+.plan-panel {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     background: var(--bg-card);
     border: 1px solid var(--border);
+    border-top: 5px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    padding: 24px 22px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.plan-card[open] { border-color: var(--accent); }
-.plan-card-current { border-color: var(--border); background: var(--bg-card); }
-.plan-card-highlight { border-color: var(--accent-2); }
-.plan-card-highlight:hover { box-shadow: 0 0 0 1px var(--accent-2), var(--shadow); }
+.plan-panel:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), var(--shadow); }
+.plan-panel-current { box-shadow: 0 0 0 2px var(--border), var(--shadow); }
 
-.plan-card-ribbon {
+.plan-panel-free { border-top-color: var(--warn); }
+.plan-panel-free .plan-name { color: var(--warn); }
+.plan-panel-pro { border-top-color: var(--success); }
+.plan-panel-pro .plan-name { color: var(--success); }
+.plan-panel-plus { border-top-color: var(--info); }
+.plan-panel-plus .plan-name { color: var(--info); }
+
+.plan-panel-ribbon {
     position: absolute;
-    top: 0;
+    top: -13px;
     inset-inline-end: 18px;
     display: flex;
     align-items: center;
     gap: 4px;
     padding: 4px 12px;
-    border-radius: 0 0 8px 8px;
+    border-radius: 999px;
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
     color: var(--accent-fg);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    box-shadow: var(--shadow);
 }
-.plan-card-ribbon .icon { width: 12px; height: 12px; }
+.plan-panel-ribbon .icon { width: 12px; height: 12px; }
 
-.plan-card summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 20px 22px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.plan-card summary::-webkit-details-marker { display: none; }
-.plan-card summary .icon { flex-shrink: 0; }
-.plan-card summary > .plan-card-right > .icon { transition: transform 0.15s ease; color: var(--muted); }
-.plan-card[open] summary > .plan-card-right > .icon { transform: rotate(180deg); }
+.plan-panel-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.plan-panel .plan-name { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.01em; }
 
-.plan-card-title { display: flex; align-items: center; gap: 10px; }
-.plan-name { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; }
-
-.plan-card-right { display: flex; align-items: center; gap: 12px; }
-.plan-price {
-    display: flex;
+.plan-panel-price {
+    display: inline-flex;
+    align-self: flex-start;
     align-items: center;
     gap: 6px;
     font-weight: 700;
     color: var(--text);
     white-space: nowrap;
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-radius: 999px;
     background: var(--bg);
     border: 1px solid var(--border);
 }
-.plan-price-stars { color: var(--accent-fg); background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); border-color: transparent; }
+.plan-panel-price-stars { color: var(--accent-fg); background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); border-color: transparent; }
 
-.plan-card-body {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 0 22px 22px;
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
-}
-.plan-included-title { margin: 0; font-size: 0.82rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.plan-included-title { margin: 2px 0 0; font-size: 0.82rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
 .plan-included-list { margin: 0; padding: 0; list-style: none; font-size: 0.92rem; color: var(--text); display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .plan-included-list li { display: flex; align-items: center; gap: 8px; }
 .plan-included-list .icon { color: var(--accent); flex-shrink: 0; width: 16px; height: 16px; }
-.plan-card-body form { width: 100%; }
-.plan-card-body .btn-primary { width: 100%; justify-content: center; }
+
+.plan-panel .btn-primary { width: 100%; justify-content: center; margin-top: auto; }
+
+.redeem-card { margin-top: 24px; }
+.redeem-form { display: flex; gap: 10px; margin-top: 10px; }
+.redeem-form input { flex: 1; margin: 0; text-transform: uppercase; letter-spacing: 0.06em; }
+.redeem-form .btn-primary { flex-shrink: 0; }
+@media (max-width: 480px) { .redeem-form { flex-direction: column; } }
 
 /* ---------- Admin panel ---------- */
 

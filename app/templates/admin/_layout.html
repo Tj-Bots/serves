@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin{% endblock %} · Serves Admin</title>
+    <title>{% block title %}Admin{% endblock %} · TeleBoss Admin</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script>
         (function () {
@@ -15,7 +15,7 @@
 </head>
 <body>
     <nav class="topnav">
-        <a href="{{ admin_url('') }}" class="brand">Serves Admin</a>
+        <a href="{{ admin_url('') }}" class="brand">TeleBoss Admin</a>
         {% if request.session.get('is_admin') %}
         <a href="{{ admin_url('/logout') }}" class="btn-ghost btn-primary-sm">התנתקות</a>
         {% endif %}

@@ -21,7 +21,7 @@ from app.slugs import RESERVED_SLUGS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("serves")
 
-app = FastAPI(title="Serves - Telegram Bot Hosting")
+app = FastAPI(title="TeleBoss - Telegram Bot Hosting")
 
 
 @app.middleware("http")

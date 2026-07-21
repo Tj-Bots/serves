@@ -1,5 +1,5 @@
 #!/bin/bash
-# סקריפט התקנה לפלטפורמת Serves על שרת Ubuntu 22.04 (VM 100 / Proxmox).
+# סקריפט התקנה לפלטפורמת TeleBoss על שרת Ubuntu 22.04 (VM 100 / Proxmox).
 #
 # הרצה (מתוך תיקיית הריפו אחרי git clone):
 #   sudo bash scripts/install.sh [domain.example.com]
