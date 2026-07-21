@@ -87,6 +87,22 @@ a:hover { color: var(--accent-hover); }
     color: transparent;
 }
 
+.plan-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: filter 0.15s ease;
+}
+.plan-pill:hover { filter: brightness(1.1); }
+.plan-pill-free { background: var(--warn-bg); color: var(--warn); }
+.plan-pill-pro { background: var(--success-bg); color: var(--success); }
+
 .nav-toggle {
     display: flex;
     align-items: center;
@@ -478,6 +494,7 @@ button[type="submit"].btn-primary { margin-top: 16px; }
 @media (max-width: 640px) {
     .topnav { padding: 10px 14px; }
     .brand { font-size: 1.1rem; }
+    .plan-pill { padding: 5px 10px; font-size: 0.72rem; }
 
     .container { padding: 16px 14px; }
 

@@ -17,6 +17,9 @@
     {% import "_icons.html" as icons %}
     <nav class="topnav">
         <a href="/" class="brand">Serves</a>
+        {% if user %}
+            <a href="/billing" class="plan-pill plan-pill-{{ user.plan }}">{{ t('nav.plan_label') }}: {{ t('plan.' ~ user.plan) }}</a>
+        {% endif %}
         <button id="nav-toggle" class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-menu">
             {{ icons.icon('menu') }}
         </button>

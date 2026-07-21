@@ -13,7 +13,7 @@ from app.security_policy import PolicyViolation, check_run_command
 from app.services import deploy as deploy_service
 from app.services import log_broadcaster
 from app.services import rate_limit
-from app.slugs import slugify
+from app.slugs import RESERVED_SLUGS, slugify
 from app.web_utils import flash, render
 
 router = APIRouter()
@@ -151,7 +151,7 @@ async def create_app(
     db.refresh(app)
 
     base_slug = slugify(name)
-    if db.query(BotApp).filter(BotApp.slug == base_slug).first():
+    if base_slug in RESERVED_SLUGS or db.query(BotApp).filter(BotApp.slug == base_slug).first():
         app.slug = f"{base_slug}-{app.id}"
     else:
         app.slug = base_slug
@@ -163,12 +163,24 @@ async def create_app(
     return RedirectResponse(f"/apps/{app.id}", status_code=303)
 
 
+def _app_public_url(app: BotApp) -> str:
+    slug = app.slug or app.id
+    base_domain = settings.APPS_BASE_DOMAIN
+    if base_domain:
+        scheme = "https" if settings.PUBLIC_BASE_URL.startswith("https") else "http"
+        return f"{scheme}://{slug}.{base_domain}/"
+    return f"/open/{slug}"
+
+
 @router.get("/apps/{app_id}")
 def app_detail(request: Request, app_id: int, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     app = _get_owned_app(db, user, app_id)
     log_tail = log_broadcaster.read_tail(app_id)
     env_text = "\n".join(f"{k}={v}" for k, v in (app.env_vars or {}).items())
-    return render(request, "app_detail.html", user=user, app=app, log_tail=log_tail, env_text=env_text)
+    return render(
+        request, "app_detail.html", user=user, app=app, log_tail=log_tail, env_text=env_text,
+        app_url=_app_public_url(app),
+    )
 
 
 @router.post("/apps/{app_id}/redeploy")

@@ -1,9 +1,16 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _base_domain_from_url(url: str) -> str:
+    if not url:
+        return ""
+    return (urlparse(url).hostname or "").lower()
 
 
 def _bool(name: str, default: bool) -> bool:
@@ -71,8 +78,18 @@ class Settings:
     PAYMENT_BOT_USERNAME: str = os.getenv("PAYMENT_BOT_USERNAME", "")
     PAYMENT_LINK_TTL_MINUTES: int = int(os.getenv("PAYMENT_LINK_TTL_MINUTES", "30"))
 
-    # כתובת הבסיס הציבורית של האתר (לקישור "פתח דשבורד" בהודעת אישור התשלום בבוט)
+    # כתובת הבסיס הציבורית של האתר (לקישור "פתח דשבורד" בהודעת אישור התשלום בבוט,
+    # וגם לזיהוי סאב-דומיין של אפליקציה - ראו APPS_BASE_DOMAIN למטה)
     PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "")
+
+    @property
+    def APPS_BASE_DOMAIN(self) -> str:
+        # אם מוגדר PUBLIC_BASE_URL (למשל https://teleboss.online), אפליקציות
+        # נגישות גם תחת <slug>.<דומיין> ולא רק /open/<slug> - בתנאי שיש
+        # רשומת DNS wildcard (*.teleboss.online) ותעודת SSL wildcard מוגדרות
+        # בשרת. אם ה-DNS לא מוגדר, בקשות לסאב-דומיין כזה פשוט לא יגיעו
+        # לשרת מלכתחילה - אז אין נזק להשאיר את זה דלוק תמיד כש-PUBLIC_BASE_URL קיים.
+        return _base_domain_from_url(self.PUBLIC_BASE_URL)
 
 
 settings = Settings()

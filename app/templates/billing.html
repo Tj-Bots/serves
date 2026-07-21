@@ -14,8 +14,8 @@
 <div class="plans-list">
     {% for key, plan in plans.items() %}
     <details class="plan-card{% if user.plan == key %} plan-card-current{% endif %}{% if plan.stars > 0 and user.plan != key %} plan-card-highlight{% endif %}">
-        {% if plan.stars > 0 and user.plan != key %}<span class="plan-card-ribbon">{{ icons.icon('star') }} {{ t('billing.recommended') }}</span>{% endif %}
         <summary>
+            {% if plan.stars > 0 and user.plan != key %}<span class="plan-card-ribbon">{{ icons.icon('star') }} {{ t('billing.recommended') }}</span>{% endif %}
             <span class="plan-card-title">
                 <span class="plan-name">{{ t('plan.' ~ key) }}</span>
                 {% if user.plan == key %}

@@ -7,7 +7,7 @@
         <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span></h1>
         <div class="app-repo">{{ app.repo_url }}</div>
         <div class="quick-links">
-            <a href="/open/{{ app.slug or app.id }}" target="_blank" rel="noopener" class="telegram-link">
+            <a href="{{ app_url }}" target="_blank" rel="noopener" class="telegram-link">
                 {{ icons.icon('grid') }} {{ t('appdetail.open_app') }}
             </a>
             {% if app.telegram_username %}

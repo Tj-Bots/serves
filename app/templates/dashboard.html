@@ -11,7 +11,7 @@
     {% endif %}
 </div>
 
-<p class="muted">{{ t('dashboard.plan_info', max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</p>
+<p class="muted">{{ t('dashboard.plan_info', plan_name=t('plan.' ~ user.plan), max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</p>
 
 {% if not apps %}
     <div class="card empty-state">

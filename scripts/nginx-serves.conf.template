@@ -1,10 +1,14 @@
 # תבנית קונפיגורציית nginx ל-reverse proxy מול הפלטפורמה.
 # install.sh מחליף את __DOMAIN__ ומעתיק את הקובץ ל-/etc/nginx/sites-available/serves
 # לאחר מכן מריצים: certbot --nginx -d __DOMAIN__   כדי לקבל HTTPS.
+#
+# server_name כולל גם *.__DOMAIN__ (סאב-דומיין לכל אפליקציה, למשל
+# my-bot.__DOMAIN__) - זה לא עושה כלום עד שמוסיפים בפועל רשומת DNS
+# wildcard ותעודת SSL wildcard, ראו README.md בסעיף "סאב-דומיין לכל אפליקציה".
 
 server {
     listen 80;
-    server_name __DOMAIN__;
+    server_name __DOMAIN__ *.__DOMAIN__;
 
     client_max_body_size 5m;
 
