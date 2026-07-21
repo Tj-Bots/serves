@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}{{ app.name }}{% endblock %}
+{% block content %}
+<div class="card placeholder-card">
+    <div class="placeholder-brand">Serves</div>
+    <h1>{{ t('placeholder.title') }}</h1>
+    <p class="muted">
+        {% if reason == 'not_running' %}
+            {{ t('placeholder.not_running') }}
+        {% else %}
+            {{ t('placeholder.no_server') }}
+        {% endif %}
+    </p>
+
+    {% if app.telegram_username %}
+        <a href="https://t.me/{{ app.telegram_username }}" target="_blank" rel="noopener" class="btn-primary">
+            {{ icons.icon('send') }} {{ t('appdetail.open_telegram') }}
+        </a>
+    {% endif %}
+
+    <p class="placeholder-back"><a href="/">{{ t('placeholder.back_home') }}</a></p>
+</div>
+{% endblock %}

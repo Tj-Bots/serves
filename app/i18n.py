@@ -55,6 +55,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "appdetail.delete": "מחיקה",
         "appdetail.delete_confirm": "למחוק את האפליקציה לצמיתות?",
         "appdetail.open_telegram": "פתח בטלגרם",
+        "appdetail.open_app": "פתח אפליקציה",
         "appdetail.last_error_label": "שגיאה אחרונה:",
         "appdetail.logs_title": "לוגים בזמן אמת",
         "appdetail.settings_title": "הגדרות",
@@ -76,6 +77,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "apps.flash.limit": "התוכנית החינמית מוגבלת ל-{max_apps} אפליקציה.",
         "apps.flash.fill_all_fields": "יש למלא את כל השדות.",
         "apps.flash.env_saved": "משתני הסביבה נשמרו. יש לבצע פריסה מחדש כדי שהשינוי ייכנס לתוקף.",
+        "placeholder.title": "אין כאן אתר להציג",
+        "placeholder.not_running": "האפליקציה הזו לא רצה כרגע.",
+        "placeholder.no_server": "האפליקציה הזו רצה, אבל לא מפעילה שרת אינטרנט (כנראה שזה בוט טלגרם בלבד).",
+        "placeholder.back_home": "חזרה ל-Serves",
     },
     "en": {
         "nav.my_apps": "My Apps",
@@ -128,6 +133,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "appdetail.delete": "Delete",
         "appdetail.delete_confirm": "Permanently delete this app?",
         "appdetail.open_telegram": "Open in Telegram",
+        "appdetail.open_app": "Open App",
         "appdetail.last_error_label": "Last error:",
         "appdetail.logs_title": "Live logs",
         "appdetail.settings_title": "Settings",
@@ -149,6 +155,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "apps.flash.limit": "The free plan is limited to {max_apps} app.",
         "apps.flash.fill_all_fields": "Please fill in all fields.",
         "apps.flash.env_saved": "Environment variables saved. Redeploy for the change to take effect.",
+        "placeholder.title": "No website here",
+        "placeholder.not_running": "This app isn't running right now.",
+        "placeholder.no_server": "This app is running, but doesn't expose a website (it's probably just a Telegram bot).",
+        "placeholder.back_home": "Back to Serves",
     },
 }
 

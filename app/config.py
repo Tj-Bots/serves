@@ -36,6 +36,11 @@ class Settings:
     SANDBOX_UID: int = int(os.getenv("SANDBOX_UID", "1000"))
     SANDBOX_GID: int = int(os.getenv("SANDBOX_GID", "1000"))
 
+    # פורט קבוע (שמור) שמוזרק כמשתנה סביבה PORT לכל אפליקציה - אם הקוד
+    # של המשתמש מריץ שרת אינטרנט, עליו להאזין על הפורט הזה (ועל 0.0.0.0,
+    # לא רק 127.0.0.1) כדי שהפלטפורמה תוכל להזרים אליו תעבורה ב-/open/<id>.
+    APP_PORT: int = int(os.getenv("APP_PORT", "8080"))
+
     PORT: int = int(os.getenv("PORT", "8000"))
 
     DISABLE_DOCKER: bool = _bool("DISABLE_DOCKER", False)

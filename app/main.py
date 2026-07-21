@@ -10,7 +10,7 @@ from app.auth import AuthRedirect
 from app.config import settings
 from app.database import init_db
 from app.i18n import SUPPORTED_LANGS
-from app.routers import apps, auth, logs_ws
+from app.routers import apps, auth, logs_ws, proxy
 from app.services.docker_manager import runtime
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +26,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(auth.router)
 app.include_router(apps.router)
 app.include_router(logs_ws.router)
+app.include_router(proxy.router)
 
 
 @app.exception_handler(AuthRedirect)

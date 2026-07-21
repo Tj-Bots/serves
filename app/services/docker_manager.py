@@ -58,6 +58,13 @@ class Runtime(abc.ABC):
         ול-on_exit(code) כשהתהליך מסתיים."""
         ...
 
+    @abc.abstractmethod
+    def get_internal_address(self, handle: str) -> tuple[str, int] | None:
+        """כתובת (host, port) שממנה אפשר להזרים תעבורת HTTP לאפליקציה,
+        אם היא בכלל מריצה שרת אינטרנט על settings.APP_PORT. None אם
+        התהליך/קונטיינר לא רץ."""
+        ...
+
 
 class DockerRuntime(Runtime):
     def __init__(self):
@@ -110,6 +117,10 @@ class DockerRuntime(Runtime):
         env = dict(env_vars or {})
         env["REQUIREMENTS_FILE"] = requirements_file or "requirements.txt"
         env["RUN_COMMAND"] = run_command
+        # שמור - אם קוד המשתמש מריץ שרת אינטרנט, עליו להאזין כאן (על
+        # 0.0.0.0) כדי שיהיה נגיש דרך /open/<id>. דורס כל PORT שהמשתמש
+        # הגדיר בעצמו כדי שהפרוקסי תמיד ידע לאן לפנות.
+        env["PORT"] = str(settings.APP_PORT)
 
         container = self.client.containers.run(
             settings.BASE_IMAGE,
@@ -181,6 +192,24 @@ class DockerRuntime(Runtime):
             exit_code = -1
         on_exit(exit_code)
 
+    def get_internal_address(self, handle: str) -> tuple[str, int] | None:
+        import docker
+
+        try:
+            container = self.client.containers.get(handle)
+            container.reload()
+        except docker.errors.NotFound:
+            return None
+        if container.status != "running":
+            return None
+
+        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+        net = networks.get(settings.SANDBOX_NETWORK)
+        ip = net.get("IPAddress") if net else None
+        if not ip:
+            return None
+        return (ip, settings.APP_PORT)
+
 
 class LocalProcessRuntime(Runtime):
     """DEV ONLY - אין בידוד, אין הגבלת משאבים/רשת. לא לשימוש בפרודקשן."""
@@ -206,6 +235,7 @@ class LocalProcessRuntime(Runtime):
         env = os.environ.copy()
         env.update({k: str(v) for k, v in (env_vars or {}).items()})
         env["PATH"] = f"{venv_dir / 'bin'}:{env['PATH']}"
+        env["PORT"] = str(settings.APP_PORT)
 
         proc = subprocess.Popen(
             shlex.split(run_command) if not any(c in run_command for c in "|&;<>") else run_command,
@@ -245,6 +275,11 @@ class LocalProcessRuntime(Runtime):
                 on_line(line.rstrip("\n"))
         exit_code = proc.wait()
         on_exit(exit_code)
+
+    def get_internal_address(self, handle: str) -> tuple[str, int] | None:
+        if not self.is_running(handle):
+            return None
+        return ("127.0.0.1", settings.APP_PORT)
 
 
 runtime: Runtime = LocalProcessRuntime() if settings.DISABLE_DOCKER else DockerRuntime()
