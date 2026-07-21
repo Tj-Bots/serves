@@ -6,6 +6,11 @@
     <div>
         <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span></h1>
         <div class="app-repo">{{ app.repo_url }}</div>
+        {% if app.telegram_username %}
+        <a href="https://t.me/{{ app.telegram_username }}" target="_blank" rel="noopener" class="telegram-link">
+            {{ icons.icon('send') }} {{ t('appdetail.open_telegram') }} <span class="muted">@{{ app.telegram_username }}</span>
+        </a>
+        {% endif %}
     </div>
     <div class="actions">
         <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">

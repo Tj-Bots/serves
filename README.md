@@ -59,10 +59,19 @@ SMTP_PORT=587
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=<App Password - לא הסיסמא הרגילה של Gmail>
 SMTP_FROM=Serves <no-reply@boss-server-bot.online>
+SMTP_USE_TLS=true
 ```
 
 ל-Gmail חובה ליצור "App Password" ייעודי (לא הסיסמא הרגילה) דרך הגדרות
 האבטחה של החשבון. אחרי שינוי `.env`: `sudo systemctl restart serves`.
+
+**אם 587 לא עובד** (חלק מספקי אחסון חוסמים אותו יוצא כברירת מחדל), נסו
+465 עם SSL מוצפן-מהתחלה במקום STARTTLS:
+```
+SMTP_PORT=465
+SMTP_USE_TLS=false
+SMTP_USE_SSL=true
+```
 
 אם `SMTP_HOST` נשאר ריק, הקוד לא נשלח בפועל אלא רק נכתב ללוגים של השרת
 (`journalctl -u serves -f`) - שימושי לבדיקות, לא לפרודקשן.
@@ -94,6 +103,47 @@ REQUIRE_EMAIL_VERIFICATION=false
 
 בעמוד האפליקציה, ליד "לוגים בזמן אמת" יש כפתור העתקה שמעתיק את כל הלוג
 המוצג ללוח (clipboard) בלחיצה אחת.
+
+## קישור לבוט בטלגרם
+
+כשמפרסים אפליקציה, הפלטפורמה סורקת את משתני הסביבה שהוגדרו ומחפשת ערך
+שנראה כמו טוקן של בוט טלגרם (`מספרים:אותיות/מספרים`, בפורמט הרגיל של
+BotFather). אם נמצא טוקן תקין, נשלחת בקשת `getMe` ל-Telegram API כדי
+לגלות את שם המשתמש של הבוט - ואז מופיע קישור "פתח בטלגרם" בעמוד
+האפליקציה שמעביר ישירות ל-`https://t.me/<username>`. זה קורה אוטומטית,
+בלי צורך לקרוא למשתנה דווקא `TELEGRAM_BOT_TOKEN`.
+
+## חיבור דומיין (nginx reverse proxy)
+
+אם כבר התקנתם בלי דומיין (`sudo bash scripts/install.sh` בלי פרמטר),
+האתר עלה על פורט 8000 בלבד. כדי לחבר דומיין ולהעלים את `:8000` מהכתובת:
+
+1. **בדקו אם כבר יש קונפיגורציית nginx/apache לדומיין** (למשל אם השרת
+   מגיע עם דף ברירת מחדל בתיקייה כמו `/var/www/<domain>/html`):
+   ```bash
+   sudo grep -rl "הדומיין-שלכם" /etc/nginx/sites-enabled/ /etc/nginx/sites-available/ 2>/dev/null
+   sudo ls /etc/apache2/sites-enabled/ 2>/dev/null   # אם יש בכלל Apache מותקן
+   ```
+   אם יש קובץ קיים שמצביע לתיקיית ה-`html` הסטטית, צריך לנטרל אותו כדי
+   שלא יתנגש עם ה-proxy החדש (nginx לא תמיד "יודע" איזה מהשניים לבחור):
+   ```bash
+   sudo rm /etc/nginx/sites-enabled/<שם-הקובץ-הקיים>   # ה-sites-available נשאר כגיבוי
+   ```
+2. **הריצו את install.sh עם הדומיין** - זה יוצר קונפיגורציית nginx חדשה
+   שמפנה (`proxy_pass`) לאפליקציה על פורט 8000, כולל תמיכה ב-WebSocket
+   ללוגים:
+   ```bash
+   cd ~/serves && git pull
+   sudo bash scripts/install.sh teleboss.online
+   ```
+3. **HTTPS** (מומלץ מאוד - אחרת סיסמאות/עוגיות עוברות בטקסט גלוי):
+   ```bash
+   sudo apt-get install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d teleboss.online
+   ```
+   Certbot גם יגדיר הפניה אוטומטית מ-HTTP ל-HTTPS.
+
+אחרי זה `https://teleboss.online` יציג את Serves ישירות, בלי `:8000`.
 
 ## עדכון מותקנת קיימת
 

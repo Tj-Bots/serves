@@ -282,6 +282,21 @@ button[type="submit"].btn-primary { margin-top: 16px; }
 .app-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
 .app-name { font-weight: 700; }
 .app-repo { color: var(--muted); font-size: 0.8rem; word-break: break-all; margin-top: 4px; }
+
+.telegram-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.telegram-link:hover { border-color: var(--accent); color: var(--accent); }
+.telegram-link .muted { font-size: 0.82rem; }
 .app-cmd { font-family: monospace; color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
 
 .badge {

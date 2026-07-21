@@ -51,6 +51,7 @@ class BotApp(Base):
     status: Mapped[AppStatus] = mapped_column(Enum(AppStatus), default=AppStatus.PENDING)
     container_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

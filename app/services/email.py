@@ -25,8 +25,12 @@ def send_verification_email(to_email: str, code: str) -> None:
     message["To"] = to_email
 
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-            if settings.SMTP_USE_TLS:
+        if settings.SMTP_USE_SSL:
+            server_cm = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+        else:
+            server_cm = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+        with server_cm as server:
+            if settings.SMTP_USE_TLS and not settings.SMTP_USE_SSL:
                 server.starttls()
             if settings.SMTP_USER:
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)

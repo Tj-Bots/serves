@@ -17,6 +17,7 @@ from app.database import SessionLocal
 from app.models import AppStatus, BotApp
 from app.security_policy import PolicyViolation, check_requirements, check_run_command
 from app.services import log_broadcaster
+from app.services import telegram as telegram_service
 from app.services.docker_manager import runtime
 
 
@@ -38,6 +39,17 @@ def _fix_ownership(code_dir: Path) -> None:
         ["chown", "-R", f"{settings.SANDBOX_UID}:{settings.SANDBOX_GID}", str(code_dir)],
         check=False,
     )
+
+
+def _set_telegram_username(app_id: int, username: str | None) -> None:
+    db = SessionLocal()
+    try:
+        app = db.get(BotApp, app_id)
+        if app:
+            app.telegram_username = username
+            db.commit()
+    finally:
+        db.close()
 
 
 def _set_status(app_id: int, status: AppStatus, error: str | None = None, container_id: str | None = None) -> None:
@@ -129,6 +141,14 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
         _set_status(app_id, AppStatus.RUNNING, container_id=handle)
         emit("[serves] application is running in the background")
+
+        try:
+            username = telegram_service.find_bot_username(env_vars)
+        except Exception:
+            username = None
+        if username:
+            _set_telegram_username(app_id, username)
+            emit(f"[serves] detected Telegram bot: @{username}")
 
         threading.Thread(target=_watch, args=(app_id, handle, loop), daemon=True).start()
 

@@ -45,7 +45,11 @@ class Settings:
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     SMTP_FROM: str = os.getenv("SMTP_FROM", "Serves <no-reply@boss-server-bot.online>")
+    # STARTTLS (פורט 587, ברירת מחדל) מול SSL מוצפן-מהתחלה (פורט 465).
+    # אם 587 חסום ע"י הספק, 465+SSL לרוב עוקף את זה - זו בדיוק השיטה
+    # שעובדת בסקריפט ה-PHP שהוכיח שהחיבור לג'ימייל בכלל אפשרי מהשרת.
     SMTP_USE_TLS: bool = _bool("SMTP_USE_TLS", True)
+    SMTP_USE_SSL: bool = _bool("SMTP_USE_SSL", False)
 
     VERIFICATION_CODE_TTL_MINUTES: int = int(os.getenv("VERIFICATION_CODE_TTL_MINUTES", "10"))
     VERIFICATION_RESEND_COOLDOWN_SECONDS: int = int(os.getenv("VERIFICATION_RESEND_COOLDOWN_SECONDS", "60"))
