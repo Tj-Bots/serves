@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}{{ t('billing.pay_title') }}{% endblock %}
+{% block content %}
+<div class="card auth-card" style="text-align: center;">
+    <h1>{{ t('billing.pay_title') }}</h1>
+    <p class="muted">{{ t('billing.pay_description', stars=purchase.stars_amount) }}</p>
+    <a href="{{ deep_link }}" target="_blank" rel="noopener" class="btn-primary" style="margin-top: 12px;">
+        {{ icons.icon('send') }} {{ t('billing.open_telegram') }}
+    </a>
+    <p class="hint" id="pay-status-hint" style="margin-top: 18px;">{{ t('billing.waiting') }}</p>
+</div>
+<script>
+(function () {
+    var payCode = "{{ purchase.pay_code }}";
+    function check() {
+        fetch("/billing/status/" + payCode)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.status === "paid") {
+                    window.location.href = "/dashboard";
+                } else {
+                    setTimeout(check, 3000);
+                }
+            })
+            .catch(function () { setTimeout(check, 5000); });
+    }
+    setTimeout(check, 3000);
+})();
+</script>
+{% endblock %}

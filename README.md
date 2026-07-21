@@ -183,6 +183,40 @@ cd ~/serves && git pull
 sudo bash scripts/install.sh   # מעתיק את הקוד המעודכן ל-/opt/serves ומפעיל מחדש
 ```
 
+## תוכניות בתשלום (Telegram Stars)
+
+יש תוכנית "Pro" (עד `PRO_MAX_APPS` אפליקציות, ברירת מחדל 3) שנרכשת עם
+כוכבי טלגרם (`PRO_PLAN_STARS`, ברירת מחדל 1000⭐). זה עובד עם **בוט
+טלגרם נפרד** (לא אחד מהאפליקציות שמתארחות בפלטפורמה) שמטפל בתשלומים -
+צריך ליצור בוט חדש דרך [@BotFather](https://t.me/BotFather) ולשים את
+הטוקן וה-username שלו ב-`.env`:
+```
+PAYMENT_BOT_TOKEN=<הטוקן מ-BotFather>
+PAYMENT_BOT_USERNAME=<שם המשתמש של הבוט, בלי @>
+PUBLIC_BASE_URL=https://teleboss.online
+```
+
+הבוט הזה **לא צריך שירות נפרד** - הוא רץ כ-background task בתוך אותו
+תהליך של הפלטפורמה (long polling מול Telegram), ועולה אוטומטית עם
+`sudo systemctl restart serves`.
+
+**זרימת התשלום:**
+1. באתר, `/billing` → כפתור שדרוג → נוצר קוד רכישה אקראי ובלתי-ניתן-לניחוש
+   (`PlanPurchase.pay_code`), והדפדפן מועבר לעמוד עם קישור עומק לבוט:
+   `https://t.me/<username>?start=pay_<code>`.
+2. הבוט מזהה את הקוד, בודק שהוא עדיין תקף (`PAYMENT_LINK_TTL_MINUTES`,
+   ברירת מחדל 30 דקות), ושולח חשבונית עם `sendInvoice` (currency=`XTR`).
+3. Telegram שולח `pre_checkout_query` - הבוט מאשר רק אם הרכישה עדיין
+   ממתינה ולא פגה.
+4. **רק אחרי** `successful_payment` אמיתי מ-Telegram (לא לפני, ולא סתם
+   כי המשתמש חזר לאתר) - הבוט מסמן את הרכישה כ"שולם" ומעדכן את
+   `user.plan` ב-DB. עמוד ה-`/billing/pay/<code>` באתר עושה polling
+   ל-`/billing/status/<code>` כל 3 שניות ומעביר אוטומטית ל-dashboard
+   ברגע שזה קורה.
+
+אם `PAYMENT_BOT_TOKEN` ריק, כל מנגנון התשלומים פשוט כבוי (הבוט לא עולה,
+וכפתורי השדרוג לא מוצגים).
+
 ## חשבון משתמש
 
 מהתפריט (☰) → "החשבון שלי" אפשר לשנות סיסמא, לשנות כתובת מייל (אם

@@ -65,9 +65,14 @@ class Settings:
     DEPLOY_ACTION_MAX: int = int(os.getenv("DEPLOY_ACTION_MAX", "5"))
     DEPLOY_ACTION_WINDOW_SECONDS: int = int(os.getenv("DEPLOY_ACTION_WINDOW_SECONDS", "60"))
 
-    # בוט תשלומים נפרד (Telegram Stars) - לא חובה למלא אם אין תוכניות בתשלום
+    # בוט תשלומים נפרד (Telegram Stars) - לא חובה למלא אם אין תוכניות בתשלום.
+    # רץ כ-background task בתוך אותו תהליך (long polling) - לא צריך שירות נפרד.
     PAYMENT_BOT_TOKEN: str = os.getenv("PAYMENT_BOT_TOKEN", "")
     PAYMENT_BOT_USERNAME: str = os.getenv("PAYMENT_BOT_USERNAME", "")
+    PAYMENT_LINK_TTL_MINUTES: int = int(os.getenv("PAYMENT_LINK_TTL_MINUTES", "30"))
+
+    # כתובת הבסיס הציבורית של האתר (לקישור "פתח דשבורד" בהודעת אישור התשלום בבוט)
+    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "")
 
 
 settings = Settings()

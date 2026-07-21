@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -10,7 +12,8 @@ from app.auth import AuthRedirect
 from app.config import settings
 from app.database import init_db
 from app.i18n import SUPPORTED_LANGS
-from app.routers import account, apps, auth, logs_ws, proxy
+from app.routers import account, apps, auth, billing, logs_ws, proxy
+from app.services import payment_bot
 from app.services.docker_manager import runtime
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +29,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(auth.router)
 app.include_router(apps.router)
 app.include_router(account.router)
+app.include_router(billing.router)
 app.include_router(logs_ws.router)
 app.include_router(proxy.router)
 
@@ -44,12 +48,23 @@ def set_language(lang_code: str, request: Request, next: str = "/"):
 
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
     try:
         runtime.ensure_ready()
     except Exception as exc:  # noqa: BLE001 - לא מפילים את השרת אם Docker עדיין לא מוכן
         logger.warning("runtime.ensure_ready() failed: %s", exc)
+
+    app.state.payment_bot_task = asyncio.create_task(payment_bot.run_polling())
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    task = getattr(app.state, "payment_bot_task", None)
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 if __name__ == "__main__":
