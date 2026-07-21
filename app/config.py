@@ -32,6 +32,10 @@ class Settings:
     SANDBOX_SUBNET: str = os.getenv("SANDBOX_SUBNET", "172.30.0.0/24")
     BASE_IMAGE: str = os.getenv("BASE_IMAGE", "serves-python-base:3.11")
 
+    # חייב להתאים בדיוק ל-uid/gid של botuser ב-docker/base.Dockerfile
+    SANDBOX_UID: int = int(os.getenv("SANDBOX_UID", "1000"))
+    SANDBOX_GID: int = int(os.getenv("SANDBOX_GID", "1000"))
+
     PORT: int = int(os.getenv("PORT", "8000"))
 
     DISABLE_DOCKER: bool = _bool("DISABLE_DOCKER", False)

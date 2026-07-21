@@ -28,6 +28,18 @@ def app_code_dir(app_id: int) -> Path:
     return app_root_dir(app_id) / "code"
 
 
+def _fix_ownership(code_dir: Path) -> None:
+    """הקוד משוכפל ע"י תהליך הפלטפורמה (root), אבל רץ בקונטיינר כ-botuser
+    (uid קבוע, ראו docker/base.Dockerfile) - בלי chown הוא לא יכול לכתוב
+    אפילו ל-pip install --user שלו. לא רלוונטי ל-LocalProcessRuntime."""
+    if settings.DISABLE_DOCKER:
+        return
+    subprocess.run(
+        ["chown", "-R", f"{settings.SANDBOX_UID}:{settings.SANDBOX_GID}", str(code_dir)],
+        check=False,
+    )
+
+
 def _set_status(app_id: int, status: AppStatus, error: str | None = None, container_id: str | None = None) -> None:
     db = SessionLocal()
     try:
@@ -108,6 +120,8 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         if req_path.exists():
             check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
         check_run_command(run_command)
+
+        _fix_ownership(code_dir)
 
         runtime.ensure_ready()
         emit("[serves] installing dependencies and starting ...")

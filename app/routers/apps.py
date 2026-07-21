@@ -23,6 +23,19 @@ def _get_owned_app(db: Session, user: User, app_id: int) -> BotApp:
     return app
 
 
+def _parse_env_text(env_text: str) -> dict:
+    env_vars = {}
+    for raw_line in env_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key:
+            env_vars[key] = value.strip()
+    return env_vars
+
+
 @router.get("/")
 def index(request: Request, db: Session = Depends(get_db)):
     from app.auth import get_optional_user
@@ -65,6 +78,7 @@ async def create_app(
     repo_url: str = Form(...),
     requirements_file: str = Form("requirements.txt"),
     run_command: str = Form(...),
+    env_text: str = Form(""),
     user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
 ):
@@ -94,7 +108,7 @@ async def create_app(
         repo_url=repo_url,
         requirements_file=requirements_file,
         run_command=run_command,
-        env_vars={},
+        env_vars=_parse_env_text(env_text),
         status=AppStatus.PENDING,
     )
     db.add(app)
@@ -153,17 +167,7 @@ def update_env(
     db: Session = Depends(get_db),
 ):
     app = _get_owned_app(db, user, app_id)
-    env_vars = {}
-    for raw_line in env_text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        if key:
-            env_vars[key] = value.strip()
-
-    app.env_vars = env_vars
+    app.env_vars = _parse_env_text(env_text)
     db.commit()
     flash(request, "apps.flash.env_saved", "success")
     return RedirectResponse(f"/apps/{app_id}", status_code=303)

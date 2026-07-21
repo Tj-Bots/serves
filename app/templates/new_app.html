@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_icons.html" as icons %}
 {% block title %}{{ t('newapp.title') }}{% endblock %}
 {% block content %}
 <div class="card">
@@ -16,7 +17,15 @@
         <label>{{ t('newapp.runcmd_label') }}</label>
         <input type="text" name="run_command" placeholder="python bot.py" required>
 
-        <p class="hint">{{ t('newapp.env_hint') }}</p>
+        <details class="env-details">
+            <summary>{{ t('newapp.env_section_title') }} {{ icons.icon('chevron') }}</summary>
+            <div class="env-details-body">
+                <textarea name="env_text" rows="5" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-..."></textarea>
+                <p class="hint">{{ t('appdetail.env_hint') }}</p>
+            </div>
+        </details>
+
+        <p class="hint" style="margin-top: 10px;">{{ t('newapp.env_hint') }}</p>
 
         <button type="submit" class="btn-primary">{{ t('newapp.submit') }}</button>
     </form>

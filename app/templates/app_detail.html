@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_icons.html" as icons %}
 {% block title %}{{ app.name }}{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -8,13 +9,13 @@
     </div>
     <div class="actions">
         <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">
-            <button type="submit" class="btn-primary">{{ t('appdetail.redeploy') }}</button>
+            <button type="submit" class="btn-primary">{{ icons.icon('redeploy') }} {{ t('appdetail.redeploy') }}</button>
         </form>
         <form method="post" action="/apps/{{ app.id }}/stop" style="display:inline">
-            <button type="submit" class="btn-ghost">{{ t('appdetail.stop') }}</button>
+            <button type="submit" class="btn-ghost">{{ icons.icon('stop') }} {{ t('appdetail.stop') }}</button>
         </form>
         <form method="post" action="/apps/{{ app.id }}/delete" style="display:inline" onsubmit="return confirm('{{ t('appdetail.delete_confirm') }}');">
-            <button type="submit" class="btn-danger">{{ t('appdetail.delete') }}</button>
+            <button type="submit" class="btn-danger">{{ icons.icon('trash') }} {{ t('appdetail.delete') }}</button>
         </form>
     </div>
 </div>
@@ -27,7 +28,13 @@
 {% endif %}
 
 <div class="card">
-    <h2>{{ t('appdetail.logs_title') }}</h2>
+    <div class="card-head-row">
+        <h2>{{ t('appdetail.logs_title') }}</h2>
+        <button id="copy-logs" type="button" class="icon-btn" aria-label="Copy logs">
+            <span class="icon-copy">{{ icons.icon('copy') }}</span>
+            <span class="icon-check">{{ icons.icon('check') }}</span>
+        </button>
+    </div>
     <div id="terminal" class="terminal">
         {% for line in log_tail %}<div class="log-line">{{ line }}</div>{% endfor %}
     </div>

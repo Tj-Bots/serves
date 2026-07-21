@@ -3,10 +3,6 @@ function serves_applyTheme(theme) {
     try {
         localStorage.setItem("serves-theme", theme);
     } catch (e) {}
-    const btn = document.getElementById("theme-toggle");
-    if (btn) {
-        btn.textContent = theme === "light" ? "🌙" : "☀️";
-    }
 }
 
 function serves_toggleTheme() {
@@ -20,4 +16,9 @@ document.addEventListener("DOMContentLoaded", function () {
         theme = localStorage.getItem("serves-theme") || "dark";
     } catch (e) {}
     serves_applyTheme(theme);
+
+    const btn = document.getElementById("theme-toggle");
+    if (btn) {
+        btn.addEventListener("click", serves_toggleTheme);
+    }
 });

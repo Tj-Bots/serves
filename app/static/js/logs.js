@@ -38,6 +38,12 @@
         const proto = location.protocol === "https:" ? "wss:" : "ws:";
         const ws = new WebSocket(`${proto}//${location.host}/ws/logs/${appId}`);
 
+        // השרת שולח מחדש את כל ההיסטוריה בכל חיבור, אבל היא כבר מוצגת
+        // מה-render הראשוני של הדף - מנקים לפני שממלאים מחדש כדי לא לשכפל.
+        ws.onopen = () => {
+            terminal.innerHTML = "";
+        };
+
         ws.onmessage = (event) => {
             appendLine(event.data);
             updateStatusFromLine(event.data);
