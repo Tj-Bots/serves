@@ -26,14 +26,23 @@ def _get_owned_app(db: Session, user: User, app_id: int) -> BotApp:
     return app
 
 
+def _plan(user: User) -> dict:
+    return PLANS.get(user.plan, PLANS["free"])
+
+
 def _max_apps(user: User) -> int:
-    return PLANS.get(user.plan, PLANS["free"])["max_apps"]
+    return _plan(user)["max_apps"]
+
+
+def _is_top_plan(user: User) -> bool:
+    return _max_apps(user) >= max(p["max_apps"] for p in PLANS.values())
 
 
 def _limit_reached_response(request: Request, user: User, max_apps: int) -> RedirectResponse:
-    """כשמגיעים למגבלת האפליקציות: אם יש תוכנית בתשלום זמינה ומוגדרת,
-    שולחים לעמוד השדרוג במקום סתם להחזיר לדשבורד עם הודעת שגיאה."""
-    if settings.PAYMENT_BOT_USERNAME and user.plan != "pro":
+    """כשמגיעים למגבלת האפליקציות: אם יש תוכנית בתשלום זמינה ומוגדרת
+    ואפשר עוד לשדרג, שולחים לעמוד השדרוג במקום סתם להחזיר לדשבורד עם
+    הודעת שגיאה."""
+    if settings.PAYMENT_BOT_USERNAME and not _is_top_plan(user):
         flash(request, "apps.flash.limit_upgrade_hint", "error", max_apps=max_apps)
         return RedirectResponse("/billing", status_code=303)
     flash(request, "apps.flash.limit_with_hint", "error", max_apps=max_apps)
@@ -74,18 +83,20 @@ def index(request: Request, db: Session = Depends(get_db)):
 @router.get("/dashboard")
 def dashboard(request: Request, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     apps = db.query(BotApp).filter(BotApp.user_id == user.id).order_by(BotApp.created_at.desc()).all()
-    max_apps = _max_apps(user)
+    plan = _plan(user)
+    max_apps = plan["max_apps"]
     return render(
         request,
         "dashboard.html",
         user=user,
         apps=apps,
         max_apps=max_apps,
-        memory_mb=settings.FREE_MEMORY_MB,
-        cpu_cores=settings.FREE_CPU_CORES,
-        disk_mb=settings.FREE_DISK_MB,
+        memory_mb=plan["memory_mb"],
+        cpu_cores=plan["cpu_cores"],
+        disk_mb=plan["disk_mb"],
         can_create=len(apps) < max_apps,
         payments_enabled=bool(settings.PAYMENT_BOT_USERNAME),
+        can_upgrade=bool(settings.PAYMENT_BOT_USERNAME) and not _is_top_plan(user),
     )
 
 

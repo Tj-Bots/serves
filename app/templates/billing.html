@@ -12,10 +12,12 @@
 {% endif %}
 
 <div class="plans-list">
+    {% set max_stars = plans.values() | map(attribute='stars') | max %}
+    {% set current_max_apps = plans[user.plan].max_apps if user.plan in plans else 0 %}
     {% for key, plan in plans.items() %}
-    <details class="plan-card{% if user.plan == key %} plan-card-current{% endif %}{% if plan.stars > 0 and user.plan != key %} plan-card-highlight{% endif %}">
+    <details class="plan-card{% if user.plan == key %} plan-card-current{% endif %}{% if plan.max_apps > current_max_apps and plan.stars > 0 %} plan-card-highlight{% endif %}">
         <summary>
-            {% if plan.stars > 0 and user.plan != key %}<span class="plan-card-ribbon">{{ icons.icon('star') }} {{ t('billing.recommended') }}</span>{% endif %}
+            {% if plan.stars == max_stars and plan.max_apps > current_max_apps %}<span class="plan-card-ribbon">{{ icons.icon('star') }} {{ t('billing.recommended') }}</span>{% endif %}
             <span class="plan-card-title">
                 <span class="plan-name">{{ t('plan.' ~ key) }}</span>
                 {% if user.plan == key %}
@@ -37,9 +39,9 @@
             <p class="plan-included-title">{{ t('billing.included_title') }}</p>
             <ul class="plan-included-list">
                 <li>{{ icons.icon('check') }} {{ t('billing.included_apps', max_apps=plan.max_apps) }}</li>
-                <li>{{ icons.icon('check') }} {{ t('billing.included_resources', memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</li>
+                <li>{{ icons.icon('check') }} {{ t('billing.included_resources', memory_mb=plan.memory_mb, cpu_cores=plan.cpu_cores, disk_mb=plan.disk_mb) }}</li>
             </ul>
-            {% if user.plan != key and plan.stars > 0 and payments_enabled %}
+            {% if plan.max_apps > current_max_apps and plan.stars > 0 and payments_enabled %}
                 <form method="post" action="/billing/upgrade/{{ key }}">
                     <button type="submit" class="btn-primary">{{ icons.icon('star') }} {{ t('billing.upgrade_button') }}</button>
                 </form>

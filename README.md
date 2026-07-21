@@ -208,11 +208,23 @@ sudo bash scripts/install.sh   # מעתיק את הקוד המעודכן ל-/opt
 
 ## תוכניות בתשלום (Telegram Stars)
 
-יש תוכנית "Pro" (עד `PRO_MAX_APPS` אפליקציות, ברירת מחדל 3) שנרכשת עם
-כוכבי טלגרם (`PRO_PLAN_STARS`, ברירת מחדל 1000⭐). זה עובד עם **בוט
-טלגרם נפרד** (לא אחד מהאפליקציות שמתארחות בפלטפורמה) שמטפל בתשלומים -
-צריך ליצור בוט חדש דרך [@BotFather](https://t.me/BotFather) ולשים את
-הטוקן וה-username שלו ב-`.env`:
+שלוש תוכניות, כל אחת עם מספר אפליקציות ומשאבים משלה (הכל ניתן לשינוי
+ב-`.env`, ראו `.env.example`):
+
+| תוכנית | אפליקציות | זיכרון | CPU | דיסק לכל אפליקציה | מחיר |
+|---|---|---|---|---|---|
+| Free | `FREE_MAX_APPS`=1 | `FREE_MEMORY_MB`=256MB | `FREE_CPU_CORES`=0.5 | `FREE_DISK_MB`=2GB | חינם |
+| Pro | `PRO_MAX_APPS`=3 | כמו Free | כמו Free | כמו Free | `PRO_PLAN_STARS`=1000⭐ |
+| Plus | `PLUS_MAX_APPS`=5 | `PLUS_MEMORY_MB`=1024MB | `PLUS_CPU_CORES`=1.0 | `PLUS_DISK_MB`=8GB | `PLUS_PLAN_STARS`=2500⭐ |
+
+`PRO_MEMORY_MB`/`PRO_CPU_CORES`/`PRO_DISK_MB` קיימים גם הם אם רוצים
+להפריד את המשאבים של Pro מ-Free בעתיד - כרגע הם פשוט יורשים את אותם
+ערכים. שינוי מגבלת דיסק לאפליקציה קיימת נכנס לתוקף רק אחרי "פריסה
+מחדש" (יצירת loop device חדש בגודל הנכון) - לא רק restart.
+
+זה עובד עם **בוט טלגרם נפרד** (לא אחד מהאפליקציות שמתארחות בפלטפורמה)
+שמטפל בתשלומים - צריך ליצור בוט חדש דרך [@BotFather](https://t.me/BotFather)
+ולשים את הטוקן וה-username שלו ב-`.env`:
 ```
 PAYMENT_BOT_TOKEN=<הטוקן מ-BotFather>
 PAYMENT_BOT_USERNAME=<שם המשתמש של הבוט, בלי @>

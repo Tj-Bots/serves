@@ -14,13 +14,18 @@ import subprocess
 import threading
 from pathlib import Path
 
-from app.config import settings
+from app.config import PLANS, settings
 from app.database import SessionLocal
 from app.models import AppStatus, BotApp
 from app.security_policy import PolicyViolation, check_requirements, check_run_command
 from app.services import log_broadcaster
 from app.services import telegram as telegram_service
 from app.services.docker_manager import runtime
+
+
+def _plan_resources(plan_name: str) -> dict:
+    plan = PLANS.get(plan_name, PLANS["free"])
+    return {"memory_mb": plan["memory_mb"], "cpu_cores": plan["cpu_cores"], "disk_mb": plan["disk_mb"]}
 
 logger = logging.getLogger("serves.deploy")
 
@@ -37,12 +42,15 @@ def _disk_image_path(app_id: int) -> Path:
     return app_root_dir(app_id) / "disk.img"
 
 
-def _ensure_app_volume(app_id: int) -> None:
+def _ensure_app_volume(app_id: int, disk_mb: int) -> None:
     """מוודא ש-/app רץ על מערכת קבצים בגודל קבוע (loop device), כדי
-    לאכוף בפועל את מגבלת האחסון (FREE_DISK_MB) - ולא רק כתיקייה רגילה
-    על דיסק המארח שאין לה תקרה. אידמפוטנטי: אם כבר mounted, לא עושה
-    כלום; אם קובץ ה-image כבר קיים (למשל אחרי restart של השרת), רק
-    מחבר אותו מחדש בלי לאבד נתונים. לא רלוונטי ל-LocalProcessRuntime."""
+    לאכוף בפועל את מגבלת האחסון (disk_mb - לפי התוכנית של הבעלים, ראו
+    _plan_resources) - ולא רק כתיקייה רגילה על דיסק המארח שאין לה תקרה.
+    אידמפוטנטי: אם כבר mounted, לא עושה כלום; אם קובץ ה-image כבר קיים
+    (למשל אחרי restart של השרת, או שהמשתמש שודרג לתוכנית עם דיסק גדול
+    יותר בזמן שהאפליקציה כבר קיימת), רק מחבר אותו מחדש בלי לאבד נתונים -
+    שינוי גודל ל-image קיים לא נתמך כרגע, צריך "פריסה מחדש" אחרי שדרוג
+    כדי שמגבלת הדיסק החדשה תיכנס לתוקף בפועל."""
     if settings.DISABLE_DOCKER:
         app_code_dir(app_id).mkdir(parents=True, exist_ok=True)
         return
@@ -55,7 +63,7 @@ def _ensure_app_volume(app_id: int) -> None:
     image_path = _disk_image_path(app_id)
     if not image_path.exists():
         image_path.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["truncate", "-s", f"{settings.FREE_DISK_MB}M", str(image_path)], check=True)
+        subprocess.run(["truncate", "-s", f"{disk_mb}M", str(image_path)], check=True)
         subprocess.run(["mkfs.ext4", "-q", "-m", "0", "-F", str(image_path)], check=True)
 
     subprocess.run(["mount", "-o", "loop", str(image_path), str(mount_dir)], check=True)
@@ -157,6 +165,7 @@ def _launch(
     requirements_file: str,
     run_command: str,
     env_vars: dict,
+    resources: dict,
     emit,
 ) -> None:
     """מריץ קוד שכבר קיים בדיסק (משותף בין deploy() ל-start_app())."""
@@ -164,7 +173,10 @@ def _launch(
 
     runtime.ensure_ready()
     emit("[serves] installing dependencies and starting ...")
-    handle = runtime.start(app_id, code_dir, requirements_file, run_command, env_vars)
+    handle = runtime.start(
+        app_id, code_dir, requirements_file, run_command, env_vars,
+        memory_mb=resources["memory_mb"], cpu_cores=resources["cpu_cores"],
+    )
 
     _set_status(app_id, AppStatus.RUNNING, container_id=handle)
     emit("[serves] application is running in the background")
@@ -197,6 +209,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         requirements_file = (app.requirements_file or "requirements.txt").strip()
         run_command = app.run_command
         env_vars = dict(app.env_vars or {})
+        resources = _plan_resources(app.owner.plan)
     finally:
         db.close()
 
@@ -207,7 +220,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
     code_dir = app_code_dir(app_id)
     try:
-        _ensure_app_volume(app_id)
+        _ensure_app_volume(app_id, resources["disk_mb"])
         emit(f"[serves] cloning {repo_url} ...")
         _clear_dir_contents(code_dir)
 
@@ -227,7 +240,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
             check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
         check_run_command(run_command)
 
-        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, emit)
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit)
 
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
@@ -249,11 +262,12 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         requirements_file = (app.requirements_file or "requirements.txt").strip()
         run_command = app.run_command
         env_vars = dict(app.env_vars or {})
+        resources = _plan_resources(app.owner.plan)
     finally:
         db.close()
 
     code_dir = app_code_dir(app_id)
-    _ensure_app_volume(app_id)
+    _ensure_app_volume(app_id, resources["disk_mb"])
     if not any(code_dir.iterdir()):
         # אין קוד בכלל (מעולם לא נפרס, או שה-volume אבד/התאפס) - fallback ל-deploy מלא
         deploy(app_id, loop)
@@ -264,7 +278,7 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
     try:
         check_run_command(run_command)
-        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, emit)
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit)
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
         emit(f"[serves] ERROR: {exc.message}")

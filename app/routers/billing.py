@@ -21,9 +21,6 @@ def billing_page(request: Request, user: User = Depends(get_current_verified_use
         user=user,
         plans=PLANS,
         payments_enabled=bool(settings.PAYMENT_BOT_USERNAME),
-        memory_mb=settings.FREE_MEMORY_MB,
-        cpu_cores=settings.FREE_CPU_CORES,
-        disk_mb=settings.FREE_DISK_MB,
     )
 
 

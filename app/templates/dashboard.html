@@ -6,7 +6,7 @@
     <h1>{{ t('dashboard.title') }}</h1>
     {% if can_create %}
         <a href="/apps/new" class="btn-primary">{{ t('nav.new_app') }}</a>
-    {% elif payments_enabled and user.plan != 'pro' %}
+    {% elif can_upgrade %}
         <a href="/billing" class="btn-primary">{{ icons.icon('star') }} {{ t('dashboard.upgrade_cta') }}</a>
     {% endif %}
 </div>

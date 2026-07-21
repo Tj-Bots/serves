@@ -33,7 +33,7 @@ class Settings:
     FREE_MAX_APPS: int = int(os.getenv("FREE_MAX_APPS", "1"))
     FREE_MEMORY_MB: int = int(os.getenv("FREE_MEMORY_MB", "256"))
     FREE_CPU_CORES: float = float(os.getenv("FREE_CPU_CORES", "0.5"))
-    FREE_DISK_MB: int = int(os.getenv("FREE_DISK_MB", "4096"))
+    FREE_DISK_MB: int = int(os.getenv("FREE_DISK_MB", "2048"))
 
     SANDBOX_NETWORK: str = os.getenv("SANDBOX_NETWORK", "serves_sandbox")
     SANDBOX_SUBNET: str = os.getenv("SANDBOX_SUBNET", "172.30.0.0/24")
@@ -94,10 +94,37 @@ class Settings:
 
 settings = Settings()
 
-# הגדרת התוכניות: מפתח -> (מקסימום אפליקציות, מחיר בכוכבי טלגרם)
+
+def _plan_resource(prefix: str, name: str, cast, default: str) -> int | float:
+    # PRO/PLUS יורשים ברירת מחדל ממגבלות התוכנית החינמית אם לא הוגדר
+    # ערך ייעודי - כלומר "כמו החינם" עד שמגדירים אחרת ב-.env.
+    return cast(os.getenv(f"{prefix}_{name}", default))
+
+
+# הגדרת התוכניות: לכל תוכנית - מקסימום אפליקציות, מחיר בכוכבי טלגרם,
+# וכמות המשאבים (זיכרון/CPU/דיסק) לכל אפליקציה בתוכנית הזו.
 PLANS: dict[str, dict] = {
-    "free": {"max_apps": settings.FREE_MAX_APPS, "stars": 0},
-    "pro": {"max_apps": int(os.getenv("PRO_MAX_APPS", "3")), "stars": int(os.getenv("PRO_PLAN_STARS", "1000"))},
+    "free": {
+        "max_apps": settings.FREE_MAX_APPS,
+        "stars": 0,
+        "memory_mb": settings.FREE_MEMORY_MB,
+        "cpu_cores": settings.FREE_CPU_CORES,
+        "disk_mb": settings.FREE_DISK_MB,
+    },
+    "pro": {
+        "max_apps": int(os.getenv("PRO_MAX_APPS", "3")),
+        "stars": int(os.getenv("PRO_PLAN_STARS", "1000")),
+        "memory_mb": _plan_resource("PRO", "MEMORY_MB", int, str(settings.FREE_MEMORY_MB)),
+        "cpu_cores": _plan_resource("PRO", "CPU_CORES", float, str(settings.FREE_CPU_CORES)),
+        "disk_mb": _plan_resource("PRO", "DISK_MB", int, str(settings.FREE_DISK_MB)),
+    },
+    "plus": {
+        "max_apps": int(os.getenv("PLUS_MAX_APPS", "5")),
+        "stars": int(os.getenv("PLUS_PLAN_STARS", "2500")),
+        "memory_mb": _plan_resource("PLUS", "MEMORY_MB", int, "1024"),
+        "cpu_cores": _plan_resource("PLUS", "CPU_CORES", float, "1.0"),
+        "disk_mb": _plan_resource("PLUS", "DISK_MB", int, "8192"),
+    },
 }
 
 settings.APPS_DIR.mkdir(parents=True, exist_ok=True)

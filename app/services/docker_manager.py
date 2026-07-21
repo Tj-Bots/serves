@@ -41,7 +41,10 @@ class Runtime(abc.ABC):
     def ensure_ready(self) -> None: ...
 
     @abc.abstractmethod
-    def start(self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict) -> str: ...
+    def start(
+        self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
+        memory_mb: int, cpu_cores: float,
+    ) -> str: ...
 
     @abc.abstractmethod
     def stop(self, handle: str) -> None: ...
@@ -101,7 +104,10 @@ class DockerRuntime(Runtime):
             docker_dir = Path(__file__).resolve().parent.parent.parent / "docker"
             self.client.images.build(path=str(docker_dir), dockerfile="base.Dockerfile", tag=settings.BASE_IMAGE)
 
-    def start(self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict) -> str:
+    def start(
+        self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
+        memory_mb: int, cpu_cores: float,
+    ) -> str:
         import docker
 
         # code_dir הוא כבר mount point של loop device בגודל קבוע (נאכף
@@ -131,9 +137,9 @@ class DockerRuntime(Runtime):
             environment=env,
             network=settings.SANDBOX_NETWORK,
             user="botuser",
-            mem_limit=f"{settings.FREE_MEMORY_MB}m",
-            memswap_limit=f"{settings.FREE_MEMORY_MB}m",
-            nano_cpus=int(settings.FREE_CPU_CORES * 1_000_000_000),
+            mem_limit=f"{memory_mb}m",
+            memswap_limit=f"{memory_mb}m",
+            nano_cpus=int(cpu_cores * 1_000_000_000),
             pids_limit=100,
             cap_drop=["ALL"],
             security_opt=["no-new-privileges:true"],
@@ -220,7 +226,11 @@ class LocalProcessRuntime(Runtime):
     def ensure_ready(self) -> None:
         return
 
-    def start(self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict) -> str:
+    def start(
+        self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
+        memory_mb: int, cpu_cores: float,
+    ) -> str:
+        # DEV ONLY - memory_mb/cpu_cores לא נאכפים כאן, ראו אזהרת המחלקה למעלה.
         import os
 
         venv_dir = code_dir.parent / "venv"
