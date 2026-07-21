@@ -45,6 +45,17 @@ def _auto_migrate() -> None:
             logger.warning("migrating: adding column %s.%s (%s)", table.name, column.name, col_type)
             with engine.begin() as conn:
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'))
+                # ALTER TABLE ADD COLUMN לא מפעיל את ה-default הפייתוני של
+                # SQLAlchemy על שורות קיימות (הוא חל רק על INSERT דרך ה-ORM) -
+                # בלי זה, עמודות עם default סקלרי (למשל plan="free") יישארו
+                # NULL אצל משתמשים קיימים. מבצעים backfill רק לברירות מחדל
+                # סקלריות פשוטות (לא callable כמו utcnow).
+                default = column.default
+                if default is not None and getattr(default, "is_scalar", False):
+                    conn.execute(
+                        text(f'UPDATE "{table.name}" SET "{column.name}" = :value WHERE "{column.name}" IS NULL'),
+                        {"value": default.arg},
+                    )
 
 
 def _backfill_bot_app_slugs() -> None:

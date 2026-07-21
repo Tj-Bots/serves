@@ -85,6 +85,7 @@ def dashboard(request: Request, user: User = Depends(get_current_verified_user),
         cpu_cores=settings.FREE_CPU_CORES,
         disk_mb=settings.FREE_DISK_MB,
         can_create=len(apps) < max_apps,
+        payments_enabled=bool(settings.PAYMENT_BOT_USERNAME),
     )
 
 
@@ -149,7 +150,11 @@ async def create_app(
     db.commit()
     db.refresh(app)
 
-    app.slug = f"{slugify(name)}-{app.id}"
+    base_slug = slugify(name)
+    if db.query(BotApp).filter(BotApp.slug == base_slug).first():
+        app.slug = f"{base_slug}-{app.id}"
+    else:
+        app.slug = base_slug
     db.commit()
 
     loop = asyncio.get_running_loop()

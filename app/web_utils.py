@@ -8,6 +8,7 @@ from app.i18n import get_lang, t
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["thousands"] = lambda n: f"{n:,}"
 
 
 def flash(request: Request, key: str, category: str = "info", **kwargs) -> None:
