@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models import User
+from app.web_utils import flash
 
 SESSION_KEY = "user_id"
 
@@ -64,6 +65,10 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User |
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     user = get_optional_user(request, db)
     if not user:
+        raise AuthRedirect("/login")
+    if user.is_blocked:
+        logout_user(request)
+        flash(request, "auth.flash.account_blocked", "error")
         raise AuthRedirect("/login")
     return user
 

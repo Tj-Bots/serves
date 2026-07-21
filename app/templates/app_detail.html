@@ -4,12 +4,21 @@
 {% block content %}
 <div class="page-head">
     <div>
-        <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span></h1>
+        <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span>{% if app.admin_suspended %} <span class="badge badge-failed">{{ t('appdetail.admin_suspended_badge') }}</span>{% endif %}</h1>
         <div class="app-repo">{{ app.repo_url }}</div>
+        {% if app.admin_suspended %}
+        <p class="muted">⛔ {{ t('appdetail.admin_suspended_message', reason=app.admin_suspend_reason or t('appdetail.admin_suspended_no_reason')) }}</p>
+        {% endif %}
         <div class="quick-links">
+            {% if user.plan != 'free' %}
             <a href="{{ app_url }}" target="_blank" rel="noopener" class="telegram-link">
                 {{ icons.icon('grid') }} {{ t('appdetail.open_app') }}
             </a>
+            {% else %}
+            <a href="/billing" class="telegram-link muted">
+                {{ icons.icon('grid') }} {{ t('appdetail.open_app_locked') }}
+            </a>
+            {% endif %}
             {% if app.telegram_username %}
             <a href="https://t.me/{{ app.telegram_username }}" target="_blank" rel="noopener" class="telegram-link">
                 {{ icons.icon('send') }} {{ t('appdetail.open_telegram') }} <span class="muted">@{{ app.telegram_username }}</span>

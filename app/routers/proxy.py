@@ -34,6 +34,12 @@ async def _proxy(request: Request, slug: str, path: str, db: Session):
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    # קישור ציבורי לאתר האפליקציה זמין רק לתוכניות בתשלום (Pro/Plus) -
+    # נאכף כאן ולא רק ב-UI, כדי שלא יהיה משנה איך מגיעים לכתובת (path
+    # תחת הדומיין הראשי, או סאב-דומיין אם מופעל).
+    if app.owner.plan == "free":
+        return render(request, "app_placeholder.html", app=app, reason="plan_required", status_code=200)
+
     address = None
     if app.status == AppStatus.RUNNING and app.container_id:
         address = runtime.get_internal_address(app.container_id)

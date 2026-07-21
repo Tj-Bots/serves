@@ -1,0 +1,62 @@
+{% extends "admin/_layout.html" %}
+{% block title %}{{ target.email }}{% endblock %}
+{% block content %}
+<h1>{{ target.first_name }} {{ target.last_name }}</h1>
+<p class="muted">{{ target.email }} &middot; תוכנית: {{ target.plan }} &middot; נרשם {{ target.created_at.strftime('%Y-%m-%d %H:%M') if target.created_at else '' }}</p>
+<p class="muted">
+    מאומת: {{ 'כן' if target.is_verified else 'לא' }}
+    &middot; חסום: {{ 'כן' if target.is_blocked else 'לא' }}
+    &middot; IP הרשמה: {{ target.signup_ip or '-' }}
+</p>
+
+<div class="card">
+    <h2>סטטוס חשבון</h2>
+    <div class="actions">
+        {% if target.is_blocked %}
+        <form method="post" action="{{ admin_url('/users/' ~ target.id ~ '/unblock') }}">
+            <button type="submit" class="btn-primary">ביטול חסימה</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ admin_url('/users/' ~ target.id ~ '/block') }}" onsubmit="return confirm('לחסום את החשבון הזה?');">
+            <button type="submit" class="btn-danger">חסימת חשבון</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ admin_url('/users/' ~ target.id ~ '/delete') }}" onsubmit="return confirm('למחוק את החשבון וכל האפליקציות שלו לצמיתות?');">
+            <button type="submit" class="btn-danger">מחיקת חשבון</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <h2>אזהרה למשתמש</h2>
+    {% if target.warning_message %}
+        <p class="muted">אזהרה פעילה: {{ target.warning_message }}</p>
+    {% endif %}
+    <form method="post" action="{{ admin_url('/users/' ~ target.id ~ '/warn') }}">
+        <label>הודעת אזהרה (יוצג למשתמש בכל עמוד עד שהוא יאשר)</label>
+        <textarea name="message" rows="2" placeholder="השאר ריק כדי להסיר אזהרה קיימת">{{ target.warning_message or '' }}</textarea>
+        <button type="submit" class="btn-primary">שמירה</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>אפליקציות ({{ apps|length }})</h2>
+    <div class="admin-table">
+        {% for app in apps %}
+        <div class="card admin-row-static">
+            <div class="admin-row-main">
+                <span class="admin-row-title">{{ app.name }}</span>
+                <span class="admin-row-sub">{{ app.repo_url }}</span>
+            </div>
+            <div class="admin-row-badges">
+                <span class="badge badge-{{ app.status.value }}">{{ app.status.value }}</span>
+                {% if app.admin_suspended %}<span class="badge badge-failed">מושעה</span>{% endif %}
+                {% if app.telegram_username %}<a href="https://t.me/{{ app.telegram_username }}" target="_blank" rel="noopener" class="telegram-link">@{{ app.telegram_username }}</a>{% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="muted">אין אפליקציות.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

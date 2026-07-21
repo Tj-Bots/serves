@@ -1,0 +1,32 @@
+{% extends "admin/_layout.html" %}
+{% block title %}סקירה כללית{% endblock %}
+{% block content %}
+<h1>סקירה כללית</h1>
+<div class="admin-stats-grid">
+    <div class="card admin-stat">
+        <div class="admin-stat-value">{{ total_users }}</div>
+        <div class="admin-stat-label">חשבונות רשומים</div>
+    </div>
+    <div class="card admin-stat">
+        <div class="admin-stat-value">{{ blocked_users }}</div>
+        <div class="admin-stat-label">חשבונות חסומים</div>
+    </div>
+    <div class="card admin-stat">
+        <div class="admin-stat-value">{{ total_apps }}</div>
+        <div class="admin-stat-label">אפליקציות נוצרו</div>
+    </div>
+    <div class="card admin-stat">
+        <div class="admin-stat-value">{{ running_apps }}</div>
+        <div class="admin-stat-label">אפליקציות רצות כרגע</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>התפלגות תוכניות</h2>
+    <ul class="plan-included-list">
+        {% for plan_key, count in plan_counts.items() %}
+        <li>{{ plan_key }}: {{ count }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

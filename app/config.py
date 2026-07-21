@@ -91,6 +91,19 @@ class Settings:
         # לשרת מלכתחילה - אז אין נזק להשאיר את זה דלוק תמיד כש-PUBLIC_BASE_URL קיים.
         return _base_domain_from_url(self.PUBLIC_BASE_URL)
 
+    # פאנל ניהול באתר - נתיב סודי (לא מקושר משום מקום) + התחברות נפרדת
+    # משלי (לא קשור לחשבונות משתמשים רגילים). אם ADMIN_USERNAME/ADMIN_PASSWORD
+    # ריקים, הפאנל כבוי לגמרי (404 על כל נתיב שלו).
+    ADMIN_PATH: str = os.getenv("ADMIN_PATH", "admin997799").strip("/") or "admin997799"
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+
+    # מזהי משתמש טלגרם (לא username - המספר המספרי) שמורשים להשתמש בפקודת
+    # /admin בבוט התשלומים. אפשר לקבל את המזהה שלך מ-@userinfobot בטלגרם.
+    ADMIN_TELEGRAM_IDS: frozenset[int] = frozenset(
+        int(x) for x in os.getenv("ADMIN_TELEGRAM_IDS", "").replace(" ", "").split(",") if x
+    )
+
 
 settings = Settings()
 

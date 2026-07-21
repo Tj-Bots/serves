@@ -6,7 +6,9 @@
     <div class="placeholder-brand">Serves</div>
     <h1>{{ t('placeholder.title') }}</h1>
     <p class="muted">
-        {% if reason == 'not_running' %}
+        {% if reason == 'plan_required' %}
+            {{ t('placeholder.plan_required') }}
+        {% elif reason == 'not_running' %}
             {{ t('placeholder.not_running') }}
         {% else %}
             {{ t('placeholder.no_server') }}

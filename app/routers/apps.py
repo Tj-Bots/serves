@@ -194,6 +194,15 @@ def app_detail(request: Request, app_id: int, user: User = Depends(get_current_v
     )
 
 
+def _check_not_suspended(request: Request, app: BotApp) -> bool:
+    """True אם מותר להמשיך. אפליקציה שהושעתה ע"י מנהל לא ניתנת להפעלה
+    מחדש ע"י המשתמש - רק מנהל יכול לבטל את ההשעיה."""
+    if app.admin_suspended:
+        flash(request, "apps.flash.admin_suspended", "error")
+        return False
+    return True
+
+
 @router.post("/apps/{app_id}/redeploy")
 async def redeploy(
     request: Request,
@@ -203,6 +212,8 @@ async def redeploy(
     db: Session = Depends(get_db),
 ):
     app = _get_owned_app(db, user, app_id)
+    if not _check_not_suspended(request, app):
+        return RedirectResponse(f"/apps/{app_id}", status_code=303)
     if not _check_deploy_rate_limit(request, user):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
     loop = asyncio.get_running_loop()
@@ -226,6 +237,8 @@ async def start(
     db: Session = Depends(get_db),
 ):
     app = _get_owned_app(db, user, app_id)
+    if not _check_not_suspended(request, app):
+        return RedirectResponse(f"/apps/{app_id}", status_code=303)
     if not _check_deploy_rate_limit(request, user):
         return RedirectResponse(f"/apps/{app_id}", status_code=303)
     loop = asyncio.get_running_loop()

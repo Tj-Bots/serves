@@ -34,6 +34,10 @@ class User(Base):
     signup_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     plan: Mapped[str] = mapped_column(String(20), default="free")
 
+    is_blocked: Mapped[bool] = mapped_column(default=False)
+    warning_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    warning_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+
     apps: Mapped[list["BotApp"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 
@@ -62,6 +66,9 @@ class BotApp(Base):
     container_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    admin_suspended: Mapped[bool] = mapped_column(default=False)
+    admin_suspend_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

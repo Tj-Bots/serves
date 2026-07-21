@@ -1,0 +1,28 @@
+{% extends "admin/_layout.html" %}
+{% block title %}משתמשים{% endblock %}
+{% block content %}
+<h1>משתמשים ({{ users|length }})</h1>
+<form method="get" action="{{ admin_url('/users') }}" class="admin-search">
+    <input type="text" name="q" value="{{ q }}" placeholder="חיפוש לפי מייל או שם">
+    <button type="submit" class="btn-primary-sm">חיפוש</button>
+</form>
+
+<div class="admin-table">
+    {% for u in users %}
+    <a href="{{ admin_url('/users/' ~ u.id) }}" class="card admin-row">
+        <div class="admin-row-main">
+            <span class="admin-row-title">{{ u.first_name }} {{ u.last_name }} &middot; {{ u.email }}</span>
+            <span class="admin-row-sub">{{ u.apps|length }} אפליקציות &middot; נרשם {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '' }}</span>
+        </div>
+        <div class="admin-row-badges">
+            <span class="badge badge-{{ 'running' if u.plan == 'plus' else ('pending' if u.plan == 'pro' else 'stopped') }}">{{ u.plan }}</span>
+            {% if not u.is_verified %}<span class="badge badge-pending">לא מאומת</span>{% endif %}
+            {% if u.is_blocked %}<span class="badge badge-failed">חסום</span>{% endif %}
+            {% if u.warning_message %}<span class="badge badge-failed">אזהרה</span>{% endif %}
+        </div>
+    </a>
+    {% else %}
+    <p class="muted">אין תוצאות.</p>
+    {% endfor %}
+</div>
+{% endblock %}

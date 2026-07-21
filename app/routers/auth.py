@@ -140,6 +140,10 @@ def login_submit(
         flash(request, "auth.flash.bad_credentials", "error")
         return render(request, "login.html", status_code=400, email=email)
 
+    if user.is_blocked:
+        flash(request, "auth.flash.account_blocked", "error")
+        return render(request, "login.html", status_code=403, email=email)
+
     login_user(request, user)
     if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_verified:
         return RedirectResponse("/verify-email", status_code=303)

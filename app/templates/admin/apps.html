@@ -1,0 +1,45 @@
+{% extends "admin/_layout.html" %}
+{% block title %}אפליקציות{% endblock %}
+{% block content %}
+<h1>אפליקציות ({{ apps|length }})</h1>
+<form method="get" action="{{ admin_url('/apps') }}" class="admin-search">
+    <input type="text" name="q" value="{{ q }}" placeholder="חיפוש לפי שם אפליקציה או מייל בעלים">
+    <button type="submit" class="btn-primary-sm">חיפוש</button>
+</form>
+
+<div class="admin-table">
+    {% for app in apps %}
+    <div class="card admin-row-static">
+        <div class="admin-row-main">
+            <span class="admin-row-title">{{ app.name }}</span>
+            <span class="admin-row-sub">
+                <a href="{{ admin_url('/users/' ~ app.owner.id) }}">{{ app.owner.email }}</a>
+                &middot; {{ app.owner.plan }} &middot; {{ app.repo_url }}
+            </span>
+        </div>
+        <div class="admin-row-badges">
+            <span class="badge badge-{{ app.status.value }}">{{ app.status.value }}</span>
+            {% if app.admin_suspended %}<span class="badge badge-failed">מושעה{% if app.admin_suspend_reason %}: {{ app.admin_suspend_reason }}{% endif %}</span>{% endif %}
+            {% if app.telegram_username %}<a href="https://t.me/{{ app.telegram_username }}" target="_blank" rel="noopener" class="telegram-link">@{{ app.telegram_username }}</a>{% endif %}
+        </div>
+        <div class="actions admin-row-actions">
+            {% if app.admin_suspended %}
+            <form method="post" action="{{ admin_url('/apps/' ~ app.id ~ '/unsuspend') }}">
+                <button type="submit" class="btn-primary-sm">ביטול השעיה</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ admin_url('/apps/' ~ app.id ~ '/suspend') }}" class="admin-suspend-form">
+                <input type="text" name="reason" placeholder="סיבה (אופציונלי)">
+                <button type="submit" class="btn-ghost">השעיה</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ admin_url('/apps/' ~ app.id ~ '/delete') }}" onsubmit="return confirm('למחוק את האפליקציה הזו לצמיתות?');">
+                <button type="submit" class="btn-danger">מחיקה</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p class="muted">אין תוצאות.</p>
+    {% endfor %}
+</div>
+{% endblock %}

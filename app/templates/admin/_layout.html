@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} · Serves Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        (function () {
+            try {
+                document.documentElement.setAttribute("data-theme", localStorage.getItem("serves-theme") || "dark");
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <nav class="topnav">
+        <a href="{{ admin_url('') }}" class="brand">Serves Admin</a>
+        {% if request.session.get('is_admin') %}
+        <a href="{{ admin_url('/logout') }}" class="btn-ghost btn-primary-sm">התנתקות</a>
+        {% endif %}
+    </nav>
+
+    {% if request.session.get('is_admin') %}
+    <div class="admin-subnav">
+        <a href="{{ admin_url('') }}">סקירה כללית</a>
+        <a href="{{ admin_url('/users') }}">משתמשים</a>
+        <a href="{{ admin_url('/apps') }}">אפליקציות</a>
+    </div>
+    {% endif %}
+
+    <main class="container">
+        {% if flashes %}
+            <div class="flashes">
+                {% for f in flashes %}
+                    <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="/static/js/theme.js"></script>
+</body>
+</html>

@@ -60,6 +60,15 @@
     </nav>
 
     <main class="container">
+        {% if user and user.warning_message %}
+            <div class="flash flash-error warning-banner">
+                <span>⚠️ {{ user.warning_message }}</span>
+                <form method="post" action="/account/dismiss-warning">
+                    <button type="submit" class="icon-btn">{{ icons.icon('check') }}</button>
+                </form>
+            </div>
+        {% endif %}
+
         {% if flashes %}
             <div class="flashes">
                 {% for f in flashes %}

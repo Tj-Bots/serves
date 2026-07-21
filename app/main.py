@@ -12,7 +12,7 @@ from app.auth import AuthRedirect
 from app.config import settings
 from app.database import SessionLocal, init_db
 from app.i18n import SUPPORTED_LANGS
-from app.routers import account, apps, auth, billing, logs_ws, proxy
+from app.routers import account, admin, apps, auth, billing, logs_ws, proxy
 from app.routers.proxy import _proxy as proxy_request
 from app.services import payment_bot
 from app.services.docker_manager import runtime
@@ -62,6 +62,7 @@ app.include_router(account.router)
 app.include_router(billing.router)
 app.include_router(logs_ws.router)
 app.include_router(proxy.router)
+app.include_router(admin.router, prefix=f"/{settings.ADMIN_PATH}")
 
 
 @app.exception_handler(AuthRedirect)

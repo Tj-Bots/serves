@@ -116,6 +116,17 @@ def change_email(
     return RedirectResponse("/account", status_code=303)
 
 
+@router.post("/account/dismiss-warning")
+def dismiss_warning(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user.warning_message = None
+    user.warning_at = None
+    db.commit()
+    return RedirectResponse("/dashboard", status_code=303)
+
+
 @router.post("/account/delete")
 def delete_account(
     request: Request,
