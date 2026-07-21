@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 import shutil
 import subprocess
 import threading
@@ -20,6 +22,8 @@ from app.services import log_broadcaster
 from app.services import telegram as telegram_service
 from app.services.docker_manager import runtime
 
+logger = logging.getLogger("serves.deploy")
+
 
 def app_root_dir(app_id: int) -> Path:
     return settings.APPS_DIR / str(app_id)
@@ -27,6 +31,50 @@ def app_root_dir(app_id: int) -> Path:
 
 def app_code_dir(app_id: int) -> Path:
     return app_root_dir(app_id) / "code"
+
+
+def _disk_image_path(app_id: int) -> Path:
+    return app_root_dir(app_id) / "disk.img"
+
+
+def _ensure_app_volume(app_id: int) -> None:
+    """מוודא ש-/app רץ על מערכת קבצים בגודל קבוע (loop device), כדי
+    לאכוף בפועל את מגבלת האחסון (FREE_DISK_MB) - ולא רק כתיקייה רגילה
+    על דיסק המארח שאין לה תקרה. אידמפוטנטי: אם כבר mounted, לא עושה
+    כלום; אם קובץ ה-image כבר קיים (למשל אחרי restart של השרת), רק
+    מחבר אותו מחדש בלי לאבד נתונים. לא רלוונטי ל-LocalProcessRuntime."""
+    if settings.DISABLE_DOCKER:
+        app_code_dir(app_id).mkdir(parents=True, exist_ok=True)
+        return
+
+    mount_dir = app_code_dir(app_id)
+    mount_dir.mkdir(parents=True, exist_ok=True)
+    if os.path.ismount(mount_dir):
+        return
+
+    image_path = _disk_image_path(app_id)
+    if not image_path.exists():
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["truncate", "-s", f"{settings.FREE_DISK_MB}M", str(image_path)], check=True)
+        subprocess.run(["mkfs.ext4", "-q", "-m", "0", "-F", str(image_path)], check=True)
+
+    subprocess.run(["mount", "-o", "loop", str(image_path), str(mount_dir)], check=True)
+
+
+def _clear_dir_contents(path: Path) -> None:
+    for entry in path.iterdir():
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry, ignore_errors=True)
+        else:
+            entry.unlink(missing_ok=True)
+
+
+def _release_app_volume(app_id: int) -> None:
+    if settings.DISABLE_DOCKER:
+        return
+    mount_dir = app_code_dir(app_id)
+    if os.path.ismount(mount_dir):
+        subprocess.run(["umount", str(mount_dir)], check=False)
 
 
 def _fix_ownership(code_dir: Path) -> None:
@@ -159,10 +207,9 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
     code_dir = app_code_dir(app_id)
     try:
+        _ensure_app_volume(app_id)
         emit(f"[serves] cloning {repo_url} ...")
-        if code_dir.exists():
-            shutil.rmtree(code_dir)
-        code_dir.parent.mkdir(parents=True, exist_ok=True)
+        _clear_dir_contents(code_dir)
 
         result = subprocess.run(
             ["git", "clone", "--depth", "1", repo_url, str(code_dir)],
@@ -206,7 +253,9 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         db.close()
 
     code_dir = app_code_dir(app_id)
-    if not code_dir.exists():
+    _ensure_app_volume(app_id)
+    if not any(code_dir.iterdir()):
+        # אין קוד בכלל (מעולם לא נפרס, או שה-volume אבד/התאפס) - fallback ל-deploy מלא
         deploy(app_id, loop)
         return
 
@@ -234,6 +283,7 @@ def teardown_app(app: BotApp) -> None:
     if app.container_id:
         runtime.remove(app.container_id)
     log_broadcaster.clear_log(app.id)
+    _release_app_volume(app.id)
     root_dir = app_root_dir(app.id)
     if root_dir.exists():
         shutil.rmtree(root_dir, ignore_errors=True)

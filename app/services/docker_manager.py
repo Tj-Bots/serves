@@ -104,9 +104,9 @@ class DockerRuntime(Runtime):
     def start(self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict) -> str:
         import docker
 
-        # TODO(settings.FREE_DISK_MB): מגבלת האחסון עדיין לא נאכפת כ-hard
-        # quota (למשל loop device עם mkfs.ext4 בגודל קבוע לכל אפליקציה) -
-        # ה-bind mount למטה נשען על מגבלת הדיסק של המארח בלבד.
+        # code_dir הוא כבר mount point של loop device בגודל קבוע (נאכף
+        # ב-app/services/deploy.py::_ensure_app_volume) - ה-bind מטה
+        # פשוט חושף את מערכת הקבצים המוגבלת הזו לקונטיינר.
         name = container_name(app_id)
         try:
             old = self.client.containers.get(name)
