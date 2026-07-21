@@ -1,24 +1,36 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Serves{% endblock %} · Serves</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        (function () {
+            try {
+                document.documentElement.setAttribute("data-theme", localStorage.getItem("serves-theme") || "dark");
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
     <nav class="topnav">
         <a href="/" class="brand">⚡ Serves</a>
         <div class="nav-links">
             {% if user %}
-                <a href="/dashboard">האפליקציות שלי</a>
-                <a href="/apps/new">+ אפליקציה חדשה</a>
+                <a href="/dashboard">{{ t('nav.my_apps') }}</a>
+                <a href="/apps/new">{{ t('nav.new_app') }}</a>
                 <span class="nav-email">{{ user.email }}</span>
-                <a href="/logout" class="btn-ghost">התנתקות</a>
+                <a href="/logout" class="btn-ghost">{{ t('nav.logout') }}</a>
             {% else %}
-                <a href="/login">התחברות</a>
-                <a href="/signup" class="btn-primary-sm">הרשמה</a>
+                <a href="/login">{{ t('nav.login') }}</a>
+                <a href="/signup" class="btn-primary-sm">{{ t('nav.signup') }}</a>
             {% endif %}
+            <div class="nav-controls">
+                <button id="theme-toggle" type="button" class="icon-btn" onclick="serves_toggleTheme()" aria-label="Toggle theme">🌙</button>
+                <a href="/lang/he?next={{ request.url.path }}" class="lang-link {{ 'active' if lang == 'he' else '' }}">עב</a>
+                <a href="/lang/en?next={{ request.url.path }}" class="lang-link {{ 'active' if lang == 'en' else '' }}">EN</a>
+            </div>
         </div>
     </nav>
 
@@ -35,10 +47,11 @@
     </main>
 
     <footer class="footer">
-        <a href="{{ terms_url }}" target="_blank" rel="noopener">תקנון השירות</a>
-        <span>· שרת בוטי טלגרם - תוכנית חינמית ללא הרשאות root</span>
+        <a href="{{ terms_url }}" target="_blank" rel="noopener">{{ t('footer.terms') }}</a>
+        <span>{{ t('footer.tagline') }}</span>
     </footer>
 
+    <script src="/static/js/theme.js"></script>
     {% block body_end %}{% endblock %}
 </body>
 </html>

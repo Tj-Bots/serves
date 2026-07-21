@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, get_optional_user, hash_password, login_user, logout_user, verify_password
+from app.config import settings
 from app.database import get_db
 from app.models import User
 from app.services.verification import check_code, generate_and_send_code, mark_verified, resend_cooldown_remaining
@@ -32,19 +33,19 @@ def signup_submit(
     email = email.strip().lower()
 
     if not accept_terms:
-        flash(request, "יש לאשר את התקנון כדי להירשם.", "error")
+        flash(request, "auth.flash.must_accept_terms", "error")
         return render(request, "signup.html", status_code=400, email=email)
 
     if len(password) < 8:
-        flash(request, "הסיסמא חייבת להכיל לפחות 8 תווים.", "error")
+        flash(request, "auth.flash.password_too_short", "error")
         return render(request, "signup.html", status_code=400, email=email)
 
     if password != password_confirm:
-        flash(request, "הסיסמאות אינן תואמות.", "error")
+        flash(request, "auth.flash.passwords_mismatch", "error")
         return render(request, "signup.html", status_code=400, email=email)
 
     if db.query(User).filter(User.email == email).first():
-        flash(request, "כבר קיים משתמש עם המייל הזה.", "error")
+        flash(request, "auth.flash.email_taken", "error")
         return render(request, "signup.html", status_code=400, email=email)
 
     user = User(
@@ -52,14 +53,24 @@ def signup_submit(
         password_hash=hash_password(password),
         accepted_terms_at=datetime.datetime.now(datetime.timezone.utc),
     )
-    generate_and_send_code(user)
+
+    if settings.REQUIRE_EMAIL_VERIFICATION:
+        generate_and_send_code(user)
+    else:
+        user.is_verified = True
+
     db.add(user)
     db.commit()
     db.refresh(user)
 
     login_user(request, user)
-    flash(request, f"נשלח קוד אימות בן 6 ספרות לכתובת {email}.", "success")
-    return RedirectResponse("/verify-email", status_code=303)
+
+    if settings.REQUIRE_EMAIL_VERIFICATION:
+        flash(request, "auth.flash.code_sent", "success", email=email)
+        return RedirectResponse("/verify-email", status_code=303)
+
+    flash(request, "auth.flash.welcome", "success")
+    return RedirectResponse("/dashboard", status_code=303)
 
 
 @router.get("/login")
@@ -79,11 +90,11 @@ def login_submit(
     email = email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash):
-        flash(request, "מייל או סיסמא שגויים.", "error")
+        flash(request, "auth.flash.bad_credentials", "error")
         return render(request, "login.html", status_code=400, email=email)
 
     login_user(request, user)
-    if not user.is_verified:
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_verified:
         return RedirectResponse("/verify-email", status_code=303)
     return RedirectResponse("/dashboard", status_code=303)
 
@@ -96,7 +107,7 @@ def logout(request: Request):
 
 @router.get("/verify-email")
 def verify_email_form(request: Request, user: User = Depends(get_current_user)):
-    if user.is_verified:
+    if user.is_verified or not settings.REQUIRE_EMAIL_VERIFICATION:
         return RedirectResponse("/dashboard", status_code=303)
     return render(request, "verify_email.html", user=user)
 
@@ -108,16 +119,16 @@ def verify_email_submit(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if user.is_verified:
+    if user.is_verified or not settings.REQUIRE_EMAIL_VERIFICATION:
         return RedirectResponse("/dashboard", status_code=303)
 
     if not check_code(user, code):
-        flash(request, "קוד שגוי או שפג תוקפו. אפשר לבקש קוד חדש.", "error")
+        flash(request, "verify.flash.bad_code", "error")
         return render(request, "verify_email.html", status_code=400, user=user)
 
     mark_verified(user)
     db.commit()
-    flash(request, "האימייל אומת בהצלחה!", "success")
+    flash(request, "verify.flash.success", "success")
     return RedirectResponse("/dashboard", status_code=303)
 
 
@@ -127,15 +138,15 @@ def verify_email_resend(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if user.is_verified:
+    if user.is_verified or not settings.REQUIRE_EMAIL_VERIFICATION:
         return RedirectResponse("/dashboard", status_code=303)
 
     remaining = resend_cooldown_remaining(user)
     if remaining > 0:
-        flash(request, f"אפשר לבקש קוד חדש בעוד {remaining} שניות.", "error")
+        flash(request, "verify.flash.cooldown", "error", seconds=remaining)
         return RedirectResponse("/verify-email", status_code=303)
 
     generate_and_send_code(user)
     db.commit()
-    flash(request, "קוד חדש נשלח למייל.", "success")
+    flash(request, "verify.flash.resent", "success")
     return RedirectResponse("/verify-email", status_code=303)

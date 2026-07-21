@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}האפליקציות שלי{% endblock %}
+{% block title %}{{ t('dashboard.title') }}{% endblock %}
 {% block content %}
 <div class="page-head">
-    <h1>האפליקציות שלי</h1>
+    <h1>{{ t('dashboard.title') }}</h1>
     {% if can_create %}
-        <a href="/apps/new" class="btn-primary">+ אפליקציה חדשה</a>
+        <a href="/apps/new" class="btn-primary">{{ t('nav.new_app') }}</a>
     {% endif %}
 </div>
 
-<p class="muted">תוכנית חינמית: עד {{ max_apps }} אפליקציה · 256MB זיכרון · חצי ליבת CPU · 4GB אחסון לכל אפליקציה.</p>
+<p class="muted">{{ t('dashboard.plan_info', max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</p>
 
 {% if not apps %}
     <div class="card empty-state">
-        <p>עדיין אין לך אפליקציות. בואו ניצור בוט טלגרם ראשון!</p>
-        <a href="/apps/new" class="btn-primary">יצירת אפליקציה</a>
+        <p>{{ t('dashboard.empty') }}</p>
+        <a href="/apps/new" class="btn-primary">{{ t('dashboard.create_first') }}</a>
     </div>
 {% else %}
     <div class="apps-grid">
@@ -21,7 +21,7 @@
         <a href="/apps/{{ app.id }}" class="card app-card">
             <div class="app-card-head">
                 <span class="app-name">{{ app.name }}</span>
-                <span class="badge badge-{{ app.status.value }}">{{ app.status.value }}</span>
+                <span class="badge badge-{{ app.status.value }}">{{ t('status.' ~ app.status.value) }}</span>
             </div>
             <div class="app-repo">{{ app.repo_url }}</div>
             <div class="app-cmd">$ {{ app.run_command }}</div>

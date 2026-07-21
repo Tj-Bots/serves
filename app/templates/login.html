@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}התחברות{% endblock %}
+{% block title %}{{ t('auth.login.title') }}{% endblock %}
 {% block content %}
 <div class="card auth-card">
-    <h1>התחברות</h1>
+    <h1>{{ t('auth.login.title') }}</h1>
     <form method="post" action="/login">
-        <label>אימייל</label>
+        <label>{{ t('form.email') }}</label>
         <input type="email" name="email" value="{{ email or '' }}" required autofocus>
 
-        <label>סיסמא</label>
+        <label>{{ t('form.password') }}</label>
         <input type="password" name="password" required>
 
-        <button type="submit" class="btn-primary">התחבר</button>
+        <button type="submit" class="btn-primary">{{ t('auth.login.submit') }}</button>
     </form>
-    <p class="muted">אין לך חשבון? <a href="/signup">הרשמה</a></p>
+    <p class="muted">{{ t('auth.login.no_account') }} <a href="/signup">{{ t('nav.signup') }}</a></p>
 </div>
 {% endblock %}

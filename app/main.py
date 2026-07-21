@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.auth import AuthRedirect
 from app.config import settings
 from app.database import init_db
+from app.i18n import SUPPORTED_LANGS
 from app.routers import apps, auth, logs_ws
 from app.services.docker_manager import runtime
 
@@ -30,6 +31,14 @@ app.include_router(logs_ws.router)
 @app.exception_handler(AuthRedirect)
 async def auth_redirect_handler(request: Request, exc: AuthRedirect):
     return RedirectResponse(exc.to, status_code=303)
+
+
+@app.get("/lang/{lang_code}")
+def set_language(lang_code: str, request: Request, next: str = "/"):
+    if lang_code in SUPPORTED_LANGS:
+        request.session["lang"] = lang_code
+    safe_next = next if next.startswith("/") and not next.startswith("//") else "/"
+    return RedirectResponse(safe_next, status_code=303)
 
 
 @app.on_event("startup")

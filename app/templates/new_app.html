@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}אפליקציה חדשה{% endblock %}
+{% block title %}{{ t('newapp.title') }}{% endblock %}
 {% block content %}
 <div class="card">
-    <h1>יצירת בוט טלגרם חדש</h1>
+    <h1>{{ t('newapp.title') }}</h1>
     <form method="post" action="/apps/new">
-        <label>שם האפליקציה</label>
-        <input type="text" name="name" placeholder="הבוט שלי" required autofocus>
+        <label>{{ t('newapp.name_label') }}</label>
+        <input type="text" name="name" placeholder="{{ t('newapp.name_placeholder') }}" required autofocus>
 
-        <label>קישור לריפו ב-GitHub</label>
+        <label>{{ t('newapp.repo_label') }}</label>
         <input type="text" name="repo_url" placeholder="https://github.com/user/my-bot" required>
 
-        <label>שם קובץ הספריות</label>
+        <label>{{ t('newapp.reqfile_label') }}</label>
         <input type="text" name="requirements_file" value="requirements.txt">
 
-        <label>פקודת הרצה</label>
+        <label>{{ t('newapp.runcmd_label') }}</label>
         <input type="text" name="run_command" placeholder="python bot.py" required>
 
-        <p class="hint">אחרי היצירה תוכל להגדיר משתני סביבה (כמו קובץ .env) מתוך עמוד האפליקציה.</p>
+        <p class="hint">{{ t('newapp.env_hint') }}</p>
 
-        <button type="submit" class="btn-primary">יצירה ופריסה</button>
+        <button type="submit" class="btn-primary">{{ t('newapp.submit') }}</button>
     </form>
 </div>
 {% endblock %}

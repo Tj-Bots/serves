@@ -3,48 +3,48 @@
 {% block content %}
 <div class="page-head">
     <div>
-        <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ app.status.value }}</span></h1>
+        <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span></h1>
         <div class="app-repo">{{ app.repo_url }}</div>
     </div>
     <div class="actions">
         <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">
-            <button type="submit" class="btn-primary">↻ פריסה מחדש</button>
+            <button type="submit" class="btn-primary">{{ t('appdetail.redeploy') }}</button>
         </form>
         <form method="post" action="/apps/{{ app.id }}/stop" style="display:inline">
-            <button type="submit" class="btn-ghost">⏹ עצירה</button>
+            <button type="submit" class="btn-ghost">{{ t('appdetail.stop') }}</button>
         </form>
-        <form method="post" action="/apps/{{ app.id }}/delete" style="display:inline" onsubmit="return confirm('למחוק את האפליקציה לצמיתות?');">
-            <button type="submit" class="btn-danger">🗑 מחיקה</button>
+        <form method="post" action="/apps/{{ app.id }}/delete" style="display:inline" onsubmit="return confirm('{{ t('appdetail.delete_confirm') }}');">
+            <button type="submit" class="btn-danger">{{ t('appdetail.delete') }}</button>
         </form>
     </div>
 </div>
 
 {% if app.last_error %}
 <div class="card error-box">
-    <strong>שגיאה אחרונה:</strong>
+    <strong>{{ t('appdetail.last_error_label') }}</strong>
     <pre>{{ app.last_error }}</pre>
 </div>
 {% endif %}
 
 <div class="card">
-    <h2>לוגים בזמן אמת</h2>
+    <h2>{{ t('appdetail.logs_title') }}</h2>
     <div id="terminal" class="terminal">
         {% for line in log_tail %}<div class="log-line">{{ line }}</div>{% endfor %}
     </div>
 </div>
 
 <div class="card">
-    <h2>הגדרות</h2>
+    <h2>{{ t('appdetail.settings_title') }}</h2>
     <form method="post" action="/apps/{{ app.id }}/env">
-        <label>קובץ ספריות</label>
+        <label>{{ t('newapp.reqfile_label') }}</label>
         <input type="text" value="{{ app.requirements_file }}" disabled>
-        <label>פקודת הרצה</label>
+        <label>{{ t('newapp.runcmd_label') }}</label>
         <input type="text" value="{{ app.run_command }}" disabled>
 
-        <label>משתני סביבה (כמו קובץ .env, שורה = KEY=VALUE)</label>
+        <label>{{ t('appdetail.env_label') }}</label>
         <textarea name="env_text" rows="6" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-...">{{ env_text }}</textarea>
-        <p class="hint">אחרי שמירה יש ללחוץ "פריסה מחדש" כדי שהשינוי ייכנס לתוקף.</p>
-        <button type="submit" class="btn-primary">שמירת משתני סביבה</button>
+        <p class="hint">{{ t('appdetail.env_hint') }}</p>
+        <button type="submit" class="btn-primary">{{ t('appdetail.env_submit') }}</button>
     </form>
 </div>
 {% endblock %}

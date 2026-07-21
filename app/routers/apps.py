@@ -19,7 +19,7 @@ router = APIRouter()
 def _get_owned_app(db: Session, user: User, app_id: int) -> BotApp:
     app = db.get(BotApp, app_id)
     if not app or app.user_id != user.id:
-        raise HTTPException(status_code=404, detail="האפליקציה לא נמצאה")
+        raise HTTPException(status_code=404, detail="Application not found")
     return app
 
 
@@ -41,6 +41,9 @@ def dashboard(request: Request, user: User = Depends(get_current_verified_user),
         user=user,
         apps=apps,
         max_apps=settings.FREE_MAX_APPS,
+        memory_mb=settings.FREE_MEMORY_MB,
+        cpu_cores=settings.FREE_CPU_CORES,
+        disk_mb=settings.FREE_DISK_MB,
         can_create=len(apps) < settings.FREE_MAX_APPS,
     )
 
@@ -49,7 +52,7 @@ def dashboard(request: Request, user: User = Depends(get_current_verified_user),
 def new_app_form(request: Request, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= settings.FREE_MAX_APPS:
-        flash(request, f"התוכנית החינמית מוגבלת ל-{settings.FREE_MAX_APPS} אפליקציה. מחק אפליקציה קיימת כדי ליצור חדשה.", "error")
+        flash(request, "apps.flash.limit_with_hint", "error", max_apps=settings.FREE_MAX_APPS)
         return RedirectResponse("/dashboard", status_code=303)
     return render(request, "new_app.html", user=user)
 
@@ -67,7 +70,7 @@ async def create_app(
 ):
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= settings.FREE_MAX_APPS:
-        flash(request, f"התוכנית החינמית מוגבלת ל-{settings.FREE_MAX_APPS} אפליקציה.", "error")
+        flash(request, "apps.flash.limit", "error", max_apps=settings.FREE_MAX_APPS)
         return RedirectResponse("/dashboard", status_code=303)
 
     name = name.strip()
@@ -76,7 +79,7 @@ async def create_app(
     run_command = run_command.strip()
 
     if not name or not repo_url or not run_command:
-        flash(request, "יש למלא את כל השדות.", "error")
+        flash(request, "apps.flash.fill_all_fields", "error")
         return RedirectResponse("/apps/new", status_code=303)
 
     try:
@@ -162,5 +165,5 @@ def update_env(
 
     app.env_vars = env_vars
     db.commit()
-    flash(request, "משתני הסביבה נשמרו. יש לבצע פריסה מחדש כדי שהשינוי ייכנס לתוקף.", "success")
+    flash(request, "apps.flash.env_saved", "success")
     return RedirectResponse(f"/apps/{app_id}", status_code=303)

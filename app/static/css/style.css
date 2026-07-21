@@ -10,6 +10,23 @@
     --warn: #d29922;
 }
 
+:root[data-theme="light"] {
+    --bg: #ffffff;
+    --bg-card: #f6f8fa;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #57606a;
+    --accent: #1a7f37;
+    --accent-hover: #116329;
+    --danger: #cf222e;
+    --warn: #9a6700;
+}
+
+/* הטרמינל תמיד כהה, גם ב-light mode - כמו כל טרמינל/קונסולה אמיתיים */
+:root[data-theme="light"] .terminal {
+    border-color: #30363d;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -41,6 +58,28 @@ html { overflow-x: hidden; }
 .brand { font-weight: 700; font-size: 1.2rem; color: var(--text); }
 .nav-links { display: flex; align-items: center; gap: 16px; }
 .nav-email { color: var(--muted); font-size: 0.9rem; }
+
+.nav-controls { display: flex; align-items: center; gap: 6px; margin-inline-start: 4px; }
+.icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.icon-btn:hover { border-color: var(--muted); }
+.lang-link {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+}
+.lang-link.active { color: var(--accent); border-color: var(--accent); }
+.lang-link:hover { color: var(--accent-hover); }
 
 .container { flex: 1; max-width: 900px; margin: 0 auto; padding: 24px; width: 100%; }
 

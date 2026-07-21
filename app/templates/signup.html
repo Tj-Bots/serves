@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% block title %}הרשמה{% endblock %}
+{% block title %}{{ t('auth.signup.title') }}{% endblock %}
 {% block content %}
 <div class="card auth-card">
-    <h1>יצירת חשבון</h1>
+    <h1>{{ t('auth.signup.title') }}</h1>
     <form method="post" action="/signup">
-        <label>אימייל</label>
+        <label>{{ t('form.email') }}</label>
         <input type="email" name="email" value="{{ email or '' }}" required autofocus>
 
-        <label>סיסמא (לפחות 8 תווים)</label>
+        <label>{{ t('auth.signup.password_label') }}</label>
         <input type="password" name="password" minlength="8" required>
 
-        <label>אימות סיסמא</label>
+        <label>{{ t('auth.signup.password_confirm_label') }}</label>
         <input type="password" name="password_confirm" minlength="8" required>
 
         <label class="checkbox-row">
             <input type="checkbox" name="accept_terms" required>
-            קראתי ואני מאשר/ת את <a href="{{ terms_url }}" target="_blank" rel="noopener">תקנון השירות</a>
+            {{ t('auth.signup.terms_prefix') }} <a href="{{ terms_url }}" target="_blank" rel="noopener">{{ t('auth.signup.terms_link') }}</a>
         </label>
 
-        <button type="submit" class="btn-primary">הרשמה</button>
+        <button type="submit" class="btn-primary">{{ t('auth.signup.submit') }}</button>
     </form>
-    <p class="muted">כבר יש לך חשבון? <a href="/login">התחברות</a></p>
+    <p class="muted">{{ t('auth.signup.have_account') }} <a href="/login">{{ t('nav.login') }}</a></p>
 </div>
 {% endblock %}

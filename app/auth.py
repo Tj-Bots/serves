@@ -2,6 +2,7 @@ import bcrypt
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models import User
 
@@ -49,6 +50,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 
 
 def get_current_verified_user(user: User = Depends(get_current_user)) -> User:
-    if not user.is_verified:
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user.is_verified:
         raise AuthRedirect("/verify-email")
     return user
