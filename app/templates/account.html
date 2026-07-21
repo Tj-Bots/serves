@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ t('account.title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('account.title') }}</h1>
+<p class="muted">{{ user.email }}</p>
+
+<div class="card">
+    <h2>{{ t('account.change_password_title') }}</h2>
+    <form method="post" action="/account/password">
+        <label>{{ t('account.current_password') }}</label>
+        <input type="password" name="current_password" required>
+        <label>{{ t('account.new_password') }}</label>
+        <input type="password" name="new_password" minlength="8" required>
+        <label>{{ t('account.new_password_confirm') }}</label>
+        <input type="password" name="new_password_confirm" minlength="8" required>
+        <button type="submit" class="btn-primary">{{ t('account.save_password') }}</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>{{ t('account.change_email_title') }}</h2>
+    <form method="post" action="/account/email">
+        <label>{{ t('account.new_email') }}</label>
+        <input type="email" name="new_email" required>
+        <label>{{ t('account.current_password') }}</label>
+        <input type="password" name="current_password" required>
+        <button type="submit" class="btn-primary">{{ t('account.save_email') }}</button>
+    </form>
+</div>
+
+<div class="card error-box">
+    <h2>{{ t('account.danger_title') }}</h2>
+    <p class="muted">{{ t('account.delete_warning') }}</p>
+    <form method="post" action="/account/delete" onsubmit="return confirm('{{ t('account.delete_confirm_js') }}');">
+        <label>{{ t('account.delete_confirm_label') }}</label>
+        <input type="password" name="current_password" required>
+        <button type="submit" class="btn-danger">{{ t('account.delete_button') }}</button>
+    </form>
+</div>
+{% endblock %}

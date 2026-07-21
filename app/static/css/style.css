@@ -111,12 +111,27 @@ a:hover { color: var(--accent-hover); }
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 8px;
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 2px;
     z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
 }
-.nav-menu.open { display: flex; }
+:root[dir="rtl"] .nav-menu { transform-origin: top left; }
+.nav-menu.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.nav-toggle .icon { transition: transform 0.15s ease; }
+.nav-toggle[aria-expanded="true"] .icon { transform: rotate(90deg); }
 
 .nav-menu-user {
     padding: 8px 10px 10px;
