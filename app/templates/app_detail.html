@@ -7,7 +7,7 @@
         <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span></h1>
         <div class="app-repo">{{ app.repo_url }}</div>
         <div class="quick-links">
-            <a href="/open/{{ app.id }}" target="_blank" rel="noopener" class="telegram-link">
+            <a href="/open/{{ app.slug or app.id }}" target="_blank" rel="noopener" class="telegram-link">
                 {{ icons.icon('grid') }} {{ t('appdetail.open_app') }}
             </a>
             {% if app.telegram_username %}
@@ -18,11 +18,17 @@
         </div>
     </div>
     <div class="actions">
-        <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">
-            <button type="submit" class="btn-primary">{{ icons.icon('redeploy') }} {{ t('appdetail.redeploy') }}</button>
-        </form>
+        {% if app.status.value == 'running' %}
         <form method="post" action="/apps/{{ app.id }}/stop" style="display:inline">
             <button type="submit" class="btn-ghost">{{ icons.icon('stop') }} {{ t('appdetail.stop') }}</button>
+        </form>
+        {% else %}
+        <form method="post" action="/apps/{{ app.id }}/start" style="display:inline">
+            <button type="submit" class="btn-primary">{{ icons.icon('play') }} {{ t('appdetail.start') }}</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/apps/{{ app.id }}/redeploy" style="display:inline">
+            <button type="submit" class="btn-ghost">{{ icons.icon('redeploy') }} {{ t('appdetail.redeploy') }}</button>
         </form>
         <form method="post" action="/apps/{{ app.id }}/delete" style="display:inline" onsubmit="return confirm('{{ t('appdetail.delete_confirm') }}');">
             <button type="submit" class="btn-danger">{{ icons.icon('trash') }} {{ t('appdetail.delete') }}</button>

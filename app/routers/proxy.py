@@ -1,7 +1,7 @@
 """
 מעביר תעבורת HTTP מהאינטרנט אל שרת האינטרנט של האפליקציה עצמה (אם יש כזה
 - ראו PORT ב-docker_manager.py), כדי שאפליקציות שהן לא רק בוט טלגרם אלא
-גם מפעילות אתר יהיו נגישות תחת /open/<app_id>. הנתיב הזה ציבורי במתכוון
+גם מפעילות אתר יהיו נגישות תחת /open/<slug>. הנתיב הזה ציבורי במתכוון
 (כמו כל אתר - אין התחברות נדרשת לצפייה בו). אם האפליקציה לא רצה, או
 שאין לה שרת אינטרנט שמאזין על הפורט השמור, מוצג דף מיתוג במקום שגיאה.
 """
@@ -29,8 +29,8 @@ _HOP_BY_HOP = {
 }
 
 
-async def _proxy(request: Request, app_id: int, path: str, db: Session):
-    app = db.get(BotApp, app_id)
+async def _proxy(request: Request, slug: str, path: str, db: Session):
+    app = db.query(BotApp).filter(BotApp.slug == slug).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -63,11 +63,11 @@ async def _proxy(request: Request, app_id: int, path: str, db: Session):
     return Response(content=upstream.content, status_code=upstream.status_code, headers=response_headers)
 
 
-@router.api_route("/open/{app_id}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def open_app_root(request: Request, app_id: int, db: Session = Depends(get_db)):
-    return await _proxy(request, app_id, "", db)
+@router.api_route("/open/{slug}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def open_app_root(request: Request, slug: str, db: Session = Depends(get_db)):
+    return await _proxy(request, slug, "", db)
 
 
-@router.api_route("/open/{app_id}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def open_app_path(request: Request, app_id: int, path: str, db: Session = Depends(get_db)):
-    return await _proxy(request, app_id, path, db)
+@router.api_route("/open/{slug}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def open_app_path(request: Request, slug: str, path: str, db: Session = Depends(get_db)):
+    return await _proxy(request, slug, path, db)

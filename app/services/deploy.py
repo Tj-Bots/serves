@@ -72,11 +72,26 @@ def _emit(app_id: int, loop: asyncio.AbstractEventLoop, line: str) -> None:
     asyncio.run_coroutine_threadsafe(log_broadcaster.append_line(app_id, line), loop)
 
 
+def _get_status(app_id: int) -> AppStatus | None:
+    db = SessionLocal()
+    try:
+        app = db.get(BotApp, app_id)
+        return app.status if app else None
+    finally:
+        db.close()
+
+
 def _watch(app_id: int, handle: str, loop: asyncio.AbstractEventLoop) -> None:
     def on_line(line: str) -> None:
         _emit(app_id, loop, line)
 
     def on_exit(code: int) -> None:
+        # אם הסטטוס כבר STOPPED זה אומר שהמשתמש עצר את זה במפורש
+        # (stop_app קבע את זה כבר) - לא לדרוס בחזרה ל-FAILED רק בגלל
+        # שקוד היציאה של תהליך שקיבל SIGTERM לרוב לא 0.
+        if _get_status(app_id) == AppStatus.STOPPED:
+            _emit(app_id, loop, "[serves] process stopped")
+            return
         if code == 0:
             _set_status(app_id, AppStatus.STOPPED)
             _emit(app_id, loop, "[serves] process exited (exit code 0)")
@@ -87,8 +102,40 @@ def _watch(app_id: int, handle: str, loop: asyncio.AbstractEventLoop) -> None:
     runtime.stream_logs(handle, on_line, on_exit)
 
 
+def _launch(
+    app_id: int,
+    loop: asyncio.AbstractEventLoop,
+    code_dir: Path,
+    requirements_file: str,
+    run_command: str,
+    env_vars: dict,
+    emit,
+) -> None:
+    """מריץ קוד שכבר קיים בדיסק (משותף בין deploy() ל-start_app())."""
+    _fix_ownership(code_dir)
+
+    runtime.ensure_ready()
+    emit("[serves] installing dependencies and starting ...")
+    handle = runtime.start(app_id, code_dir, requirements_file, run_command, env_vars)
+
+    _set_status(app_id, AppStatus.RUNNING, container_id=handle)
+    emit("[serves] application is running in the background")
+
+    try:
+        username = telegram_service.find_bot_username(env_vars)
+    except Exception:
+        username = None
+    if username:
+        _set_telegram_username(app_id, username)
+        emit(f"[serves] detected Telegram bot: @{username}")
+
+    threading.Thread(target=_watch, args=(app_id, handle, loop), daemon=True).start()
+
+
 def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
-    """פונקציה חוסמת - להריץ כ-background task, לא בתוך ה-event loop הראשי."""
+    """פונקציה חוסמת - להריץ כ-background task, לא בתוך ה-event loop הראשי.
+    משכפלת את הריפו מחדש מאפס ואז מריצה. לשחזור הרצה בלי לשכפל מחדש -
+    ראו start_app()."""
     db = SessionLocal()
     try:
         app = db.get(BotApp, app_id)
@@ -133,29 +180,46 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
             check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
         check_run_command(run_command)
 
-        _fix_ownership(code_dir)
-
-        runtime.ensure_ready()
-        emit("[serves] installing dependencies and starting ...")
-        handle = runtime.start(app_id, code_dir, requirements_file, run_command, env_vars)
-
-        _set_status(app_id, AppStatus.RUNNING, container_id=handle)
-        emit("[serves] application is running in the background")
-
-        try:
-            username = telegram_service.find_bot_username(env_vars)
-        except Exception:
-            username = None
-        if username:
-            _set_telegram_username(app_id, username)
-            emit(f"[serves] detected Telegram bot: @{username}")
-
-        threading.Thread(target=_watch, args=(app_id, handle, loop), daemon=True).start()
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, emit)
 
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
         emit(f"[serves] ERROR: {exc.message}")
     except Exception as exc:  # noqa: BLE001 - כל כשל בפריסה מדווח למשתמש בלוג
+        _set_status(app_id, AppStatus.FAILED, error=str(exc))
+        emit(f"[serves] ERROR: {exc}")
+
+
+def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
+    """מפעילה מחדש אפליקציה שכבר נפרסה (למשל אחרי עצירה), בלי לשכפל את
+    הריפו מחדש - מהירה יותר מ-deploy(). אם אין קוד על הדיסק בכלל
+    (מעולם לא נפרס בהצלחה), נופלת חזרה ל-deploy() מלא."""
+    db = SessionLocal()
+    try:
+        app = db.get(BotApp, app_id)
+        if not app:
+            return
+        requirements_file = (app.requirements_file or "requirements.txt").strip()
+        run_command = app.run_command
+        env_vars = dict(app.env_vars or {})
+    finally:
+        db.close()
+
+    code_dir = app_code_dir(app_id)
+    if not code_dir.exists():
+        deploy(app_id, loop)
+        return
+
+    def emit(line: str) -> None:
+        _emit(app_id, loop, line)
+
+    try:
+        check_run_command(run_command)
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, emit)
+    except PolicyViolation as exc:
+        _set_status(app_id, AppStatus.FAILED, error=exc.message)
+        emit(f"[serves] ERROR: {exc.message}")
+    except Exception as exc:  # noqa: BLE001
         _set_status(app_id, AppStatus.FAILED, error=str(exc))
         emit(f"[serves] ERROR: {exc}")
 

@@ -2,6 +2,7 @@ import asyncio
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_verified_user
@@ -11,6 +12,7 @@ from app.models import AppStatus, BotApp, User
 from app.security_policy import PolicyViolation, check_run_command
 from app.services import deploy as deploy_service
 from app.services import log_broadcaster
+from app.slugs import slugify
 from app.web_utils import flash, render
 
 router = APIRouter()
@@ -96,6 +98,10 @@ async def create_app(
         flash(request, "apps.flash.fill_all_fields", "error")
         return RedirectResponse("/apps/new", status_code=303)
 
+    if db.query(BotApp).filter(func.lower(BotApp.name) == name.lower()).first():
+        flash(request, "apps.flash.name_taken", "error")
+        return RedirectResponse("/apps/new", status_code=303)
+
     try:
         check_run_command(run_command)
     except PolicyViolation as exc:
@@ -114,6 +120,9 @@ async def create_app(
     db.add(app)
     db.commit()
     db.refresh(app)
+
+    app.slug = f"{slugify(name)}-{app.id}"
+    db.commit()
 
     loop = asyncio.get_running_loop()
     background_tasks.add_task(deploy_service.deploy, app.id, loop)
@@ -146,6 +155,19 @@ async def redeploy(
 def stop(app_id: int, user: User = Depends(get_current_verified_user), db: Session = Depends(get_db)):
     app = _get_owned_app(db, user, app_id)
     deploy_service.stop_app(app)
+    return RedirectResponse(f"/apps/{app_id}", status_code=303)
+
+
+@router.post("/apps/{app_id}/start")
+async def start(
+    app_id: int,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_verified_user),
+    db: Session = Depends(get_db),
+):
+    app = _get_owned_app(db, user, app_id)
+    loop = asyncio.get_running_loop()
+    background_tasks.add_task(deploy_service.start_app, app.id, loop)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 

@@ -43,6 +43,7 @@ class BotApp(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    slug: Mapped[str | None] = mapped_column(String(140), unique=True, nullable=True, index=True)
     repo_url: Mapped[str] = mapped_column(String(500), nullable=False)
     requirements_file: Mapped[str] = mapped_column(String(255), default="requirements.txt")
     run_command: Mapped[str] = mapped_column(String(500), nullable=False)
