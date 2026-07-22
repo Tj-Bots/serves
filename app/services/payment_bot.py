@@ -17,6 +17,7 @@
 
 import asyncio
 import datetime
+import html
 import logging
 
 import httpx
@@ -169,13 +170,17 @@ async def _handle_successful_payment(client: httpx.AsyncClient, message: dict) -
 המספרי, ניתן לקבל מ-@userinfobot). כל התפריטים נבנים עם inline keyboard
 (callback_query), לא קלט טקסט חופשי, כדי למנוע צורך במעקב אחרי מצב
 שיחה. פעולות הרסניות (מחיקת חשבון/אפליקציה) דורשות אישור בלחיצה נוספת.
+לחיצה על כפתור עורכת את ההודעה הקיימת במקום (editMessageText) - לא
+שולחת הודעה חדשה בכל פעם - עם עיצוב HTML (מודגש/נטוי/קוד).
 """
+
+PAGE_SIZE = 10
 
 ADMIN_MAIN_MENU = {
     "inline_keyboard": [
         [{"text": "📊 Stats", "callback_data": "adm:stats"}],
-        [{"text": "👥 Users", "callback_data": "adm:users"}],
-        [{"text": "📦 Apps", "callback_data": "adm:apps"}],
+        [{"text": "👥 Users", "callback_data": "adm:users:0"}],
+        [{"text": "📦 Apps", "callback_data": "adm:apps:0"}],
         [{"text": "🎟 Generate code", "callback_data": "adm:codes"}],
     ]
 }
@@ -185,18 +190,46 @@ def _is_admin(chat_id) -> bool:
     return chat_id in settings.ADMIN_TELEGRAM_IDS
 
 
-def _back_menu(text: str = "« Back", data: str = "adm:menu") -> dict:
-    return {"inline_keyboard": [[{"text": text, "callback_data": data}]]}
+def _esc(text) -> str:
+    return html.escape(str(text)) if text is not None else ""
+
+
+def _back_row(text: str = "« Back", data: str = "adm:menu") -> list[dict]:
+    return [{"text": text, "callback_data": data}]
+
+
+def _page_nav_row(prefix: str, page: int, has_next: bool) -> list[dict]:
+    """שורת ניווט: בעמוד הראשון רק "Next", בעמודים באמצע גם וגם, בעמוד
+    האחרון רק "Prev" - כי כל צד מוצג רק אם יש לאן לזוז אליו. הבוט כולו
+    באנגלית בכוונה (ראו docstring למעלה)."""
+    row = []
+    if page > 0:
+        row.append({"text": "◀ Prev", "callback_data": f"{prefix}:{page - 1}"})
+    if has_next:
+        row.append({"text": "Next ▶", "callback_data": f"{prefix}:{page + 1}"})
+    return row
+
+
+async def _reply(client: httpx.AsyncClient, chat_id, message_id, text: str, reply_markup: dict | None = None) -> None:
+    """עורך את ההודעה הקיימת (אם באנו מלחיצה על כפתור) או שולח הודעה
+    חדשה (אם זו הפעלה ראשונה של /admin, שאין לה הודעה קודמת לערוך)."""
+    if message_id is not None:
+        await _call(
+            client, "editMessageText", chat_id=chat_id, message_id=message_id,
+            text=text, reply_markup=reply_markup, parse_mode="HTML",
+        )
+    else:
+        await _call(client, "sendMessage", chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
 
 
 async def _handle_admin_command(client: httpx.AsyncClient, message: dict) -> None:
     chat_id = message["chat"]["id"]
     if not _is_admin(chat_id):
         return
-    await _call(client, "sendMessage", chat_id=chat_id, text="🛠 TeleBoss Admin", reply_markup=ADMIN_MAIN_MENU)
+    await _reply(client, chat_id, None, "<b>🛠 TeleBoss Admin</b>", ADMIN_MAIN_MENU)
 
 
-async def _send_stats(client: httpx.AsyncClient, chat_id) -> None:
+async def _send_stats(client: httpx.AsyncClient, chat_id, message_id) -> None:
     db = SessionLocal()
     try:
         total_users = db.query(User).count()
@@ -206,33 +239,31 @@ async def _send_stats(client: httpx.AsyncClient, chat_id) -> None:
         plan_counts = dict(db.query(User.plan, func.count(User.id)).group_by(User.plan).all())
     finally:
         db.close()
-    lines = [
-        "📊 Stats",
-        f"Accounts: {total_users} (blocked: {blocked})",
-        f"Apps: {total_apps} (running: {running})",
-        "Plans: " + ", ".join(f"{k}={v}" for k, v in plan_counts.items()),
-    ]
-    await _call(client, "sendMessage", chat_id=chat_id, text="\n".join(lines), reply_markup=_back_menu())
+    plans_line = ", ".join(f"<b>{_esc(k)}</b>: {v}" for k, v in plan_counts.items())
+    text = (
+        "<b>📊 Stats</b>\n\n"
+        f"<b>Accounts:</b> {total_users} <i>(blocked: {blocked})</i>\n"
+        f"<b>Apps:</b> {total_apps} <i>(running: {running})</i>\n"
+        f"<b>Plans:</b> {plans_line}"
+    )
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": [_back_row()]})
 
 
-async def _send_code_menu(client: httpx.AsyncClient, chat_id) -> None:
+async def _send_code_menu(client: httpx.AsyncClient, chat_id, message_id) -> None:
     rows = [
         [{"text": f"🎟 Generate {name.capitalize()} code", "callback_data": f"adm:gencode:{name}"}]
         for name, plan in PLANS.items()
         if plan["stars"] > 0
     ]
-    rows.append([{"text": "« Back", "callback_data": "adm:menu"}])
-    await _call(
-        client, "sendMessage", chat_id=chat_id,
-        text="🎟 Generate a single-use redeem code (expires in 30 days) that grants a paid plan for free:",
-        reply_markup={"inline_keyboard": rows},
-    )
+    rows.append(_back_row())
+    text = "<b>🎟 Redeem codes</b>\n\nGenerate a single-use code (expires in 30 days) that grants a paid plan for free:"
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": rows})
 
 
-async def _generate_code(client: httpx.AsyncClient, chat_id, plan_name: str) -> None:
+async def _generate_code(client: httpx.AsyncClient, chat_id, message_id, plan_name: str) -> None:
     plan = PLANS.get(plan_name)
     if not plan or plan["stars"] <= 0:
-        await _call(client, "sendMessage", chat_id=chat_id, text="Invalid plan.")
+        await _reply(client, chat_id, message_id, "Invalid plan.", {"inline_keyboard": [_back_row("« Codes", "adm:codes")]})
         return
     db = SessionLocal()
     try:
@@ -240,64 +271,71 @@ async def _generate_code(client: httpx.AsyncClient, chat_id, plan_name: str) -> 
         code_str = promo.code
     finally:
         db.close()
-    await _call(
-        client, "sendMessage", chat_id=chat_id,
-        text=(
-            f"🎟 New {plan_name.capitalize()} code (single-use, expires in 30 days):\n\n"
-            f"`{code_str}`\n\n"
-            "Give this to whoever should redeem it - they enter it on the Billing page of the website."
-        ),
-        parse_mode="Markdown",
-        reply_markup=_back_menu("« Codes", "adm:codes"),
+    text = (
+        f"<b>🎟 New {_esc(plan_name.capitalize())} code</b>\n\n"
+        f"<code>{_esc(code_str)}</code>\n\n"
+        "<i>Single-use, expires in 30 days. Give this to whoever should redeem it - "
+        "they enter it on the Billing page of the website.</i>"
     )
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": [_back_row("« Codes", "adm:codes")]})
 
 
-async def _send_users(client: httpx.AsyncClient, chat_id) -> None:
+async def _send_users(client: httpx.AsyncClient, chat_id, message_id, page: int = 0) -> None:
     db = SessionLocal()
     try:
-        users = db.query(User).order_by(User.created_at.desc()).limit(10).all()
+        total = db.query(User).count()
+        users = (
+            db.query(User).order_by(User.created_at.desc())
+            .offset(page * PAGE_SIZE).limit(PAGE_SIZE).all()
+        )
         rows = [
-            [{"text": f"{'🚫' if u.is_blocked else '✅'} {u.email} ({u.plan})", "callback_data": f"adm:u:{u.id}"}]
+            [{
+                "text": f"{'🚫' if u.is_blocked else '✅'} {u.email} ({u.plan})",
+                "callback_data": f"adm:u:{u.id}:{page}",
+            }]
             for u in users
         ]
     finally:
         db.close()
-    rows.append([{"text": "« Back", "callback_data": "adm:menu"}])
-    await _call(
-        client, "sendMessage", chat_id=chat_id,
-        text="👥 Latest 10 accounts (tap to manage - use the web admin panel to search):",
-        reply_markup={"inline_keyboard": rows},
-    )
+    total_pages = max(1, -(-total // PAGE_SIZE))
+    has_next = (page + 1) * PAGE_SIZE < total
+    nav = _page_nav_row("adm:users", page, has_next)
+    if nav:
+        rows.append(nav)
+    rows.append(_back_row())
+    text = f"<b>👥 Users</b> — <i>page {page + 1} of {total_pages}</i> ({total} total)\n\nTap a user to manage."
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": rows})
 
 
-async def _send_user_detail(client: httpx.AsyncClient, chat_id, user_id: int) -> None:
+async def _send_user_detail(client: httpx.AsyncClient, chat_id, message_id, user_id: int, page: int = 0) -> None:
     db = SessionLocal()
     try:
         u = db.get(User, user_id)
         if not u:
-            await _call(client, "sendMessage", chat_id=chat_id, text="User not found.")
+            await _reply(client, chat_id, message_id, "User not found.", {"inline_keyboard": [_back_row("« Users", f"adm:users:{page}")]})
             return
         text = (
-            f"👤 {u.first_name} {u.last_name}\n{u.email}\n"
-            f"Plan: {u.plan} · Apps: {len(u.apps)}\n"
-            f"Blocked: {'yes' if u.is_blocked else 'no'} · Verified: {'yes' if u.is_verified else 'no'}"
+            f"<b>👤 {_esc(u.first_name)} {_esc(u.last_name)}</b>\n"
+            f"<code>{_esc(u.email)}</code>\n\n"
+            f"<b>Plan:</b> {_esc(u.plan)} · <b>Apps:</b> {len(u.apps)}\n"
+            f"<b>Blocked:</b> {'yes' if u.is_blocked else 'no'} · <b>Verified:</b> {'yes' if u.is_verified else 'no'}"
         )
         block_btn = (
-            {"text": "✅ Unblock", "callback_data": f"adm:uunblk:{u.id}"}
+            {"text": "✅ Unblock", "callback_data": f"adm:uunblk:{u.id}:{page}"}
             if u.is_blocked
-            else {"text": "🚫 Block", "callback_data": f"adm:ublk:{u.id}"}
+            else {"text": "🚫 Block", "callback_data": f"adm:ublk:{u.id}:{page}"}
         )
     finally:
         db.close()
     rows = [
         [block_btn],
-        [{"text": "🗑 Delete account", "callback_data": f"adm:udelc:{user_id}"}],
-        [{"text": "« Back to users", "callback_data": "adm:users"}],
+        [{"text": "🗑 Delete account", "callback_data": f"adm:udelc:{user_id}:{page}"}],
+        _back_row("« Back to users", f"adm:users:{page}"),
     ]
-    await _call(client, "sendMessage", chat_id=chat_id, text=text, reply_markup={"inline_keyboard": rows})
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": rows})
 
 
-async def _set_user_blocked(client: httpx.AsyncClient, chat_id, user_id: int, blocked: bool) -> None:
+async def _set_user_blocked(client: httpx.AsyncClient, chat_id, message_id, user_id: int, blocked: bool, page: int) -> None:
     db = SessionLocal()
     try:
         u = db.get(User, user_id)
@@ -306,10 +344,10 @@ async def _set_user_blocked(client: httpx.AsyncClient, chat_id, user_id: int, bl
             db.commit()
     finally:
         db.close()
-    await _send_user_detail(client, chat_id, user_id)
+    await _send_user_detail(client, chat_id, message_id, user_id, page)
 
 
-async def _delete_user(client: httpx.AsyncClient, chat_id, user_id: int) -> None:
+async def _delete_user(client: httpx.AsyncClient, chat_id, message_id, user_id: int, page: int) -> None:
     db = SessionLocal()
     try:
         u = db.get(User, user_id)
@@ -320,55 +358,67 @@ async def _delete_user(client: httpx.AsyncClient, chat_id, user_id: int) -> None
             db.commit()
     finally:
         db.close()
-    await _call(client, "sendMessage", chat_id=chat_id, text="🗑 Account deleted.", reply_markup=_back_menu("« Users", "adm:users"))
+    await _reply(client, chat_id, message_id, "🗑 Account deleted.", {"inline_keyboard": [_back_row("« Users", f"adm:users:{page}")]})
 
 
-async def _send_apps(client: httpx.AsyncClient, chat_id) -> None:
+async def _send_apps(client: httpx.AsyncClient, chat_id, message_id, page: int = 0) -> None:
     db = SessionLocal()
     try:
-        apps = db.query(BotApp).order_by(BotApp.created_at.desc()).limit(10).all()
+        total = db.query(BotApp).count()
+        apps = (
+            db.query(BotApp).order_by(BotApp.created_at.desc())
+            .offset(page * PAGE_SIZE).limit(PAGE_SIZE).all()
+        )
         rows = [
-            [{"text": f"{'⏸' if a.admin_suspended else '▶' if a.status == AppStatus.RUNNING else '⏹'} {a.name}", "callback_data": f"adm:a:{a.id}"}]
+            [{
+                "text": f"{'⏸' if a.admin_suspended else '▶' if a.status == AppStatus.RUNNING else '⏹'} {a.name}",
+                "callback_data": f"adm:a:{a.id}:{page}",
+            }]
             for a in apps
         ]
     finally:
         db.close()
-    rows.append([{"text": "« Back", "callback_data": "adm:menu"}])
-    await _call(
-        client, "sendMessage", chat_id=chat_id,
-        text="📦 Latest 10 apps (tap to manage - use the web admin panel to search):",
-        reply_markup={"inline_keyboard": rows},
-    )
+    total_pages = max(1, -(-total // PAGE_SIZE))
+    has_next = (page + 1) * PAGE_SIZE < total
+    nav = _page_nav_row("adm:apps", page, has_next)
+    if nav:
+        rows.append(nav)
+    rows.append(_back_row())
+    text = f"<b>📦 Apps</b> — <i>page {page + 1} of {total_pages}</i> ({total} total)\n\nTap an app to manage."
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": rows})
 
 
-async def _send_app_detail(client: httpx.AsyncClient, chat_id, app_id: int) -> None:
+async def _send_app_detail(client: httpx.AsyncClient, chat_id, message_id, app_id: int, page: int = 0) -> None:
     db = SessionLocal()
     try:
         a = db.get(BotApp, app_id)
         if not a:
-            await _call(client, "sendMessage", chat_id=chat_id, text="App not found.")
+            await _reply(client, chat_id, message_id, "App not found.", {"inline_keyboard": [_back_row("« Apps", f"adm:apps:{page}")]})
             return
         text = (
-            f"📦 {a.name}\nOwner: {a.owner.email} ({a.owner.plan})\nStatus: {a.status.value}\n"
-            + (f"Suspended: {a.admin_suspend_reason or 'yes'}\n" if a.admin_suspended else "")
-            + (f"Bot: @{a.telegram_username}" if a.telegram_username else "No Telegram bot detected")
+            f"<b>📦 {_esc(a.name)}</b>\n"
+            f"<b>Owner:</b> {_esc(a.owner.email)} ({_esc(a.owner.plan)})\n"
+            f"<b>Status:</b> {_esc(a.status.value)}\n"
         )
+        if a.admin_suspended:
+            text += f"<b>Suspended:</b> <i>{_esc(a.admin_suspend_reason or 'yes')}</i>\n"
+        text += f"<b>Bot:</b> @{_esc(a.telegram_username)}" if a.telegram_username else "<i>No Telegram bot detected</i>"
         suspend_btn = (
-            {"text": "▶️ Unsuspend", "callback_data": f"adm:aunsusp:{a.id}"}
+            {"text": "▶️ Unsuspend", "callback_data": f"adm:aunsusp:{a.id}:{page}"}
             if a.admin_suspended
-            else {"text": "⏸ Suspend", "callback_data": f"adm:asusp:{a.id}"}
+            else {"text": "⏸ Suspend", "callback_data": f"adm:asusp:{a.id}:{page}"}
         )
     finally:
         db.close()
     rows = [
         [suspend_btn],
-        [{"text": "🗑 Delete app", "callback_data": f"adm:adelc:{app_id}"}],
-        [{"text": "« Back to apps", "callback_data": "adm:apps"}],
+        [{"text": "🗑 Delete app", "callback_data": f"adm:adelc:{app_id}:{page}"}],
+        _back_row("« Back to apps", f"adm:apps:{page}"),
     ]
-    await _call(client, "sendMessage", chat_id=chat_id, text=text, reply_markup={"inline_keyboard": rows})
+    await _reply(client, chat_id, message_id, text, {"inline_keyboard": rows})
 
 
-async def _set_app_suspended(client: httpx.AsyncClient, chat_id, app_id: int, suspended: bool) -> None:
+async def _set_app_suspended(client: httpx.AsyncClient, chat_id, message_id, app_id: int, suspended: bool, page: int) -> None:
     db = SessionLocal()
     try:
         a = db.get(BotApp, app_id)
@@ -382,10 +432,10 @@ async def _set_app_suspended(client: httpx.AsyncClient, chat_id, app_id: int, su
             db.commit()
     finally:
         db.close()
-    await _send_app_detail(client, chat_id, app_id)
+    await _send_app_detail(client, chat_id, message_id, app_id, page)
 
 
-async def _delete_app(client: httpx.AsyncClient, chat_id, app_id: int) -> None:
+async def _delete_app(client: httpx.AsyncClient, chat_id, message_id, app_id: int, page: int) -> None:
     db = SessionLocal()
     try:
         a = db.get(BotApp, app_id)
@@ -395,65 +445,72 @@ async def _delete_app(client: httpx.AsyncClient, chat_id, app_id: int) -> None:
             db.commit()
     finally:
         db.close()
-    await _call(client, "sendMessage", chat_id=chat_id, text="🗑 App deleted.", reply_markup=_back_menu("« Apps", "adm:apps"))
+    await _reply(client, chat_id, message_id, "🗑 App deleted.", {"inline_keyboard": [_back_row("« Apps", f"adm:apps:{page}")]})
 
 
 async def _handle_admin_callback(client: httpx.AsyncClient, query: dict) -> None:
     chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
     data = query.get("data", "")
     await _call(client, "answerCallbackQuery", callback_query_id=query["id"])
     if not _is_admin(chat_id):
         return
 
-    if data == "adm:menu":
-        await _call(client, "sendMessage", chat_id=chat_id, text="🛠 TeleBoss Admin", reply_markup=ADMIN_MAIN_MENU)
-    elif data == "adm:stats":
-        await _send_stats(client, chat_id)
-    elif data == "adm:users":
-        await _send_users(client, chat_id)
-    elif data == "adm:apps":
-        await _send_apps(client, chat_id)
-    elif data == "adm:codes":
-        await _send_code_menu(client, chat_id)
-    elif data.startswith("adm:gencode:"):
-        await _generate_code(client, chat_id, data.split(":", 2)[2])
-    elif data.startswith("adm:u:"):
-        await _send_user_detail(client, chat_id, int(data.split(":")[2]))
-    elif data.startswith("adm:ublk:"):
-        await _set_user_blocked(client, chat_id, int(data.split(":")[2]), True)
-    elif data.startswith("adm:uunblk:"):
-        await _set_user_blocked(client, chat_id, int(data.split(":")[2]), False)
-    elif data.startswith("adm:udelc:"):
-        uid = int(data.split(":")[2])
+    parts = data.split(":")
+    # פורמטים: adm:menu | adm:stats | adm:codes | adm:gencode:<plan>
+    #           adm:users:<page> | adm:apps:<page>
+    #           adm:u:<id>:<page> | adm:ublk:<id>:<page> | adm:uunblk:<id>:<page>
+    #           adm:udelc:<id>:<page> | adm:udel:<id>:<page>
+    #           adm:a:<id>:<page> | adm:asusp:<id>:<page> | adm:aunsusp:<id>:<page>
+    #           adm:adelc:<id>:<page> | adm:adel:<id>:<page>
+    action = parts[1] if len(parts) > 1 else ""
+
+    if action == "menu":
+        await _reply(client, chat_id, message_id, "<b>🛠 TeleBoss Admin</b>", ADMIN_MAIN_MENU)
+    elif action == "stats":
+        await _send_stats(client, chat_id, message_id)
+    elif action == "codes":
+        await _send_code_menu(client, chat_id, message_id)
+    elif action == "gencode":
+        await _generate_code(client, chat_id, message_id, parts[2])
+    elif action == "users":
+        await _send_users(client, chat_id, message_id, int(parts[2]))
+    elif action == "apps":
+        await _send_apps(client, chat_id, message_id, int(parts[2]))
+    elif action == "u":
+        await _send_user_detail(client, chat_id, message_id, int(parts[2]), int(parts[3]))
+    elif action == "ublk":
+        await _set_user_blocked(client, chat_id, message_id, int(parts[2]), True, int(parts[3]))
+    elif action == "uunblk":
+        await _set_user_blocked(client, chat_id, message_id, int(parts[2]), False, int(parts[3]))
+    elif action == "udelc":
+        uid, page = int(parts[2]), int(parts[3])
         rows = [[
-            {"text": "⚠️ Yes, delete", "callback_data": f"adm:udel:{uid}"},
-            {"text": "Cancel", "callback_data": f"adm:u:{uid}"},
+            {"text": "⚠️ Yes, delete", "callback_data": f"adm:udel:{uid}:{page}"},
+            {"text": "Cancel", "callback_data": f"adm:u:{uid}:{page}"},
         ]]
-        await _call(
-            client, "sendMessage", chat_id=chat_id,
-            text="Delete this account and ALL its apps? This cannot be undone.",
-            reply_markup={"inline_keyboard": rows},
+        await _reply(
+            client, chat_id, message_id,
+            "<b>⚠️ Delete this account and ALL its apps?</b>\nThis cannot be undone.",
+            {"inline_keyboard": rows},
         )
-    elif data.startswith("adm:udel:"):
-        await _delete_user(client, chat_id, int(data.split(":")[2]))
-    elif data.startswith("adm:a:"):
-        await _send_app_detail(client, chat_id, int(data.split(":")[2]))
-    elif data.startswith("adm:asusp:"):
-        await _set_app_suspended(client, chat_id, int(data.split(":")[2]), True)
-    elif data.startswith("adm:aunsusp:"):
-        await _set_app_suspended(client, chat_id, int(data.split(":")[2]), False)
-    elif data.startswith("adm:adelc:"):
-        aid = int(data.split(":")[2])
+    elif action == "udel":
+        await _delete_user(client, chat_id, message_id, int(parts[2]), int(parts[3]))
+    elif action == "a":
+        await _send_app_detail(client, chat_id, message_id, int(parts[2]), int(parts[3]))
+    elif action == "asusp":
+        await _set_app_suspended(client, chat_id, message_id, int(parts[2]), True, int(parts[3]))
+    elif action == "aunsusp":
+        await _set_app_suspended(client, chat_id, message_id, int(parts[2]), False, int(parts[3]))
+    elif action == "adelc":
+        aid, page = int(parts[2]), int(parts[3])
         rows = [[
-            {"text": "⚠️ Yes, delete", "callback_data": f"adm:adel:{aid}"},
-            {"text": "Cancel", "callback_data": f"adm:a:{aid}"},
+            {"text": "⚠️ Yes, delete", "callback_data": f"adm:adel:{aid}:{page}"},
+            {"text": "Cancel", "callback_data": f"adm:a:{aid}:{page}"},
         ]]
-        await _call(
-            client, "sendMessage", chat_id=chat_id,
-            text="Delete this app permanently?", reply_markup={"inline_keyboard": rows},
-        )
-    elif data.startswith("adm:adel:"):
-        await _delete_app(client, chat_id, int(data.split(":")[2]))
+        await _reply(client, chat_id, message_id, "<b>⚠️ Delete this app permanently?</b>", {"inline_keyboard": rows})
+    elif action == "adel":
+        await _delete_app(client, chat_id, message_id, int(parts[2]), int(parts[3]))
 
 
 async def _dispatch(client: httpx.AsyncClient, update: dict) -> None:
