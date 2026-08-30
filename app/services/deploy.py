@@ -316,6 +316,9 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         _emit(app_id, loop, line)
 
     try:
+        req_path = code_dir / requirements_file
+        if req_path.exists():
+            check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
         check_run_command(run_command)
         _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit)
     except PolicyViolation as exc:
