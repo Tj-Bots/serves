@@ -10,7 +10,10 @@ server {
     listen 80;
     server_name __DOMAIN__ *.__DOMAIN__;
 
-    client_max_body_size 5m;
+    # תואם ל-MAX_ZIP_UPLOAD_MB (ברירת מחדל 200MB, ראו .env.example) - עם
+    # שוליים קטנים, כדי שהעלאת zip כמקור קוד לא תיחסם ע"י nginx לפני
+    # שהיא בכלל מגיעה לבדיקת הגודל של האפליקציה עצמה.
+    client_max_body_size 220m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
