@@ -10,7 +10,8 @@ ffmpeg או כל חבילת מערכת אחרת. אפשר רק להתקין ספ
    לא קישור חיצוני), ומאמת את המייל עם קוד בן 6 ספרות שנשלח אליו
    (ראו "אימות אימייל" למטה).
 2. בתוכנית החינמית אפשר ליצור אפליקציה אחת (בוט טלגרם).
-3. יוצרים אפליקציה עם: קישור לריפו ב-GitHub, שם קובץ הספריות (ברירת מחדל
+3. יוצרים אפליקציה עם קוד מריפו ב-GitHub **או** העלאת קובץ zip (ראו שדה
+   "מקור הקוד" בטופס היצירה), שם קובץ הספריות (ברירת מחדל
    `requirements.txt`), ופקודת הרצה (למשל `python bot.py`).
 4. הפלטפורמה משכפלת את הריפו, מריצה אותו בתוך קונטיינר Docker מבודד,
    ומזרימה את הלוגים בזמן אמת למסך כהה בסגנון טרמינל (WebSocket).
@@ -190,16 +191,22 @@ sudo bash scripts/install.sh   # מעתיק את הקוד המעודכן ל-/opt
 שלוש תוכניות, כל אחת עם מספר אפליקציות ומשאבים משלה (הכל ניתן לשינוי
 ב-`.env`, ראו `.env.example`):
 
-| תוכנית | אפליקציות | זיכרון | CPU | דיסק לכל אפליקציה | מחיר |
-|---|---|---|---|---|---|
-| Free | `FREE_MAX_APPS`=1 | `FREE_MEMORY_MB`=256MB | `FREE_CPU_CORES`=0.5 | `FREE_DISK_MB`=2GB | חינם |
-| Pro | `PRO_MAX_APPS`=3 | כמו Free | כמו Free | כמו Free | `PRO_PLAN_STARS`=1000⭐ |
-| Plus | `PLUS_MAX_APPS`=5 | `PLUS_MEMORY_MB`=1024MB | `PLUS_CPU_CORES`=1.0 | `PLUS_DISK_MB`=8GB | `PLUS_PLAN_STARS`=2500⭐ |
+| תוכנית | אפליקציות | זיכרון | CPU | דיסק לכל אפליקציה | רוחב פס | מחיר |
+|---|---|---|---|---|---|---|
+| Free | `FREE_MAX_APPS`=1 | `FREE_MEMORY_MB`=256MB | `FREE_CPU_CORES`=0.5 | `FREE_DISK_MB`=2GB | `FREE_BANDWIDTH_MBPS`=5 | חינם |
+| Pro | `PRO_MAX_APPS`=3 | כמו Free | כמו Free | כמו Free | `PRO_BANDWIDTH_MBPS`=15 | `PRO_PLAN_STARS`=1000⭐ |
+| Plus | `PLUS_MAX_APPS`=5 | `PLUS_MEMORY_MB`=1024MB | `PLUS_CPU_CORES`=1.0 | `PLUS_DISK_MB`=8GB | `PLUS_BANDWIDTH_MBPS`=100 | `PLUS_PLAN_STARS`=2500⭐ |
 
 `PRO_MEMORY_MB`/`PRO_CPU_CORES`/`PRO_DISK_MB` קיימים גם הם אם רוצים
 להפריד את המשאבים של Pro מ-Free בעתיד - כרגע הם פשוט יורשים את אותם
 ערכים. שינוי מגבלת דיסק לאפליקציה קיימת נכנס לתוקף רק אחרי "פריסה
 מחדש" (יצירת loop device חדש בגודל הנכון) - לא רק restart.
+
+הגבלת רוחב הפס (`app/services/bandwidth.py`) נאכפת ברמת המארח עם
+`tc`+`ifb` על ה-veth של כל קונטיינר, ומיושמת אוטומטית בכל הפעלה של
+אפליקציה - best-effort: אם `tc`/`ifb` לא זמינים בשרת, זה רק נרשם
+כאזהרה בלוג ולא מפיל את הפריסה. אפשר לכבות לגמרי עם
+`BANDWIDTH_LIMIT_ENABLED=false`.
 
 זה עובד עם **בוט טלגרם נפרד** (לא אחד מהאפליקציות שמתארחות בפלטפורמה)
 שמטפל בתשלומים - צריך ליצור בוט חדש דרך [@BotFather](https://t.me/BotFather)
