@@ -7,7 +7,8 @@
     <form method="post" action="/apps/new" enctype="multipart/form-data" id="new-app-form">
         <div class="wizard-step" id="step-name">
             <label>{{ t('newapp.name_label') }}</label>
-            <input type="text" name="name" id="field-name" placeholder="{{ t('newapp.name_placeholder') }}" required autofocus>
+            <input type="text" name="name" id="field-name" placeholder="{{ t('newapp.name_placeholder') }}" pattern="[A-Za-z][A-Za-z0-9]*" title="{{ t('newapp.name_hint') }}" required autofocus>
+            <p class="hint">{{ t('newapp.name_hint') }}</p>
         </div>
 
         <div class="wizard-step" id="step-source" hidden>
@@ -136,7 +137,7 @@
         zipInput.required = zipMode;
         branchField.hidden = zipMode || !repoInput.value.trim();
 
-        if (nameInput.value.trim()) reveal(stepSource);
+        if (/^[A-Za-z][A-Za-z0-9]*$/.test(nameInput.value.trim())) reveal(stepSource);
         if (stepSource.hidden) return;
 
         if (sourceHasValue()) reveal(stepDockerfile);

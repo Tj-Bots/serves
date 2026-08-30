@@ -22,6 +22,10 @@ from app.web_utils import flash, render
 
 router = APIRouter()
 
+# רק אותיות אנגליות וספרות, לא מתחיל בספרה - כדי שהשם יהיה שמיש בתור
+# חלק מה-slug הציבורי (/open/<name>-<random>) בלי צורך בתעתיק/סינון.
+APP_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
+
 
 def _get_owned_app(db: Session, user: User, app_id: int) -> BotApp:
     app = db.get(BotApp, app_id)
@@ -234,6 +238,10 @@ async def create_app(
 
     if not name or (not use_dockerfile and not run_command):
         flash(request, "apps.flash.fill_all_fields", "error")
+        return RedirectResponse("/apps/new", status_code=303)
+
+    if not APP_NAME_RE.match(name):
+        flash(request, "apps.flash.invalid_name", "error")
         return RedirectResponse("/apps/new", status_code=303)
 
     if source_type == "git":

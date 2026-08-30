@@ -6,8 +6,25 @@ from fastapi.templating import Jinja2Templates
 from app.i18n import get_lang, t
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["thousands"] = lambda n: f"{n:,}"
+
+
+def static_url(rel_path: str) -> str:
+    """מוסיף ?v=<mtime> לקובץ סטטי (css/js) לפי זמן השינוי שלו בדיסק, כדי
+    שדפדפנים יטענו את הגרסה החדשה מייד אחרי דיפלוי במקום להציג גרסה
+    ישנה ש-cache-י (בלי query param קבוע, שינוי בקובץ לא היה משנה את
+    ה-URL בעיני הדפדפן, אז cache אגרסיבי היה יכול לתקוע גרסה ישנה)."""
+    file_path = STATIC_DIR / rel_path.lstrip("/")
+    try:
+        version = int(file_path.stat().st_mtime)
+    except OSError:
+        version = 0
+    return f"/static/{rel_path}?v={version}"
+
+
+templates.env.globals["static_url"] = static_url
 
 
 def flash(request: Request, key: str, category: str = "info", **kwargs) -> None:
