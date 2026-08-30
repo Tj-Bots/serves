@@ -33,7 +33,7 @@
         <p class="plan-included-title">{{ t('billing.included_title') }}</p>
         <ul class="plan-included-list">
             <li>{{ icons.icon('check') }} {{ t('billing.included_apps', max_apps=plan.max_apps) }}</li>
-            <li>{{ icons.icon('check') }} {{ t('billing.included_resources', memory_mb=plan.memory_mb, cpu_cores=plan.cpu_cores, disk_mb=plan.disk_mb) }}</li>
+            <li>{{ icons.icon('check') }} {{ t('billing.included_resources', memory_mb=plan.memory_mb, cpu_cores=plan.cpu_cores, disk_mb=plan.disk_mb, bandwidth_mbps=plan.bandwidth_mbps) }}</li>
         </ul>
         {% if plan.max_apps > current_max_apps and plan.stars > 0 and payments_enabled %}
             <form method="post" action="/billing/upgrade/{{ key }}">

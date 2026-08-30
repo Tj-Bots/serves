@@ -23,7 +23,7 @@
     {% endif %}
 </div>
 
-<p class="muted">{{ t('dashboard.plan_info', plan_name=t('plan.' ~ user.plan), max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb) }}</p>
+<p class="muted">{{ t('dashboard.plan_info', plan_name=t('plan.' ~ user.plan), max_apps=max_apps, memory_mb=memory_mb, cpu_cores=cpu_cores, disk_mb=disk_mb, bandwidth_mbps=bandwidth_mbps) }}</p>
 {% if trial_days_left is not none and not trial_expired and trial_days_left > 3 %}
 <p class="muted">{{ t('dashboard.trial_days_left', days=trial_days_left) }}</p>
 {% endif %}

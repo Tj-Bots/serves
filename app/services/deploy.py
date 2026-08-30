@@ -26,7 +26,12 @@ from app.services.docker_manager import runtime
 
 def _plan_resources(plan_name: str) -> dict:
     plan = PLANS.get(plan_name, PLANS["free"])
-    return {"memory_mb": plan["memory_mb"], "cpu_cores": plan["cpu_cores"], "disk_mb": plan["disk_mb"]}
+    return {
+        "memory_mb": plan["memory_mb"],
+        "cpu_cores": plan["cpu_cores"],
+        "disk_mb": plan["disk_mb"],
+        "bandwidth_mbps": plan["bandwidth_mbps"],
+    }
 
 logger = logging.getLogger("serves.deploy")
 
@@ -201,6 +206,7 @@ def _launch(
     handle = runtime.start(
         app_id, code_dir, requirements_file, run_command, env_vars,
         memory_mb=resources["memory_mb"], cpu_cores=resources["cpu_cores"],
+        bandwidth_mbps=resources["bandwidth_mbps"],
     )
 
     _set_status(app_id, AppStatus.RUNNING, container_id=handle)

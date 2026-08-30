@@ -43,7 +43,7 @@ class Runtime(abc.ABC):
     @abc.abstractmethod
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
     ) -> str: ...
 
     @abc.abstractmethod
@@ -106,7 +106,7 @@ class DockerRuntime(Runtime):
 
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
     ) -> str:
         import docker
 
@@ -147,6 +147,12 @@ class DockerRuntime(Runtime):
             tmpfs={"/tmp": "size=256m,uid=1000,gid=1000"},
             restart_policy={"Name": "no"},
         )
+
+        if bandwidth_mbps:
+            from app.services import bandwidth
+
+            bandwidth.apply_limit(app_id, container.id, bandwidth_mbps)
+
         return container.id
 
     def stop(self, handle: str) -> None:
@@ -228,9 +234,9 @@ class LocalProcessRuntime(Runtime):
 
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
     ) -> str:
-        # DEV ONLY - memory_mb/cpu_cores לא נאכפים כאן, ראו אזהרת המחלקה למעלה.
+        # DEV ONLY - memory_mb/cpu_cores/bandwidth_mbps לא נאכפים כאן, ראו אזהרת המחלקה למעלה.
         import os
 
         venv_dir = code_dir.parent / "venv"

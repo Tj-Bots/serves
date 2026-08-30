@@ -41,6 +41,11 @@ class Settings:
     # (לא תלויה בתוכנית של המשתמש).
     MAX_ZIP_UPLOAD_MB: int = int(os.getenv("MAX_ZIP_UPLOAD_MB", "200"))
 
+    # הגבלת רוחב פס פר-אפליקציה לפי תוכנית (ראה app/services/bandwidth.py) -
+    # דורש tc+ifb זמינים בשרת (root). אפשר לכבות לגמרי אם יש בעיה בשרת.
+    BANDWIDTH_LIMIT_ENABLED: bool = _bool("BANDWIDTH_LIMIT_ENABLED", True)
+    FREE_BANDWIDTH_MBPS: int = int(os.getenv("FREE_BANDWIDTH_MBPS", "5"))
+
     SANDBOX_NETWORK: str = os.getenv("SANDBOX_NETWORK", "serves_sandbox")
     SANDBOX_SUBNET: str = os.getenv("SANDBOX_SUBNET", "172.30.0.0/24")
     BASE_IMAGE: str = os.getenv("BASE_IMAGE", "serves-python-base:3.11")
@@ -129,6 +134,7 @@ PLANS: dict[str, dict] = {
         "memory_mb": settings.FREE_MEMORY_MB,
         "cpu_cores": settings.FREE_CPU_CORES,
         "disk_mb": settings.FREE_DISK_MB,
+        "bandwidth_mbps": settings.FREE_BANDWIDTH_MBPS,
     },
     "pro": {
         "max_apps": int(os.getenv("PRO_MAX_APPS", "3")),
@@ -136,6 +142,7 @@ PLANS: dict[str, dict] = {
         "memory_mb": _plan_resource("PRO", "MEMORY_MB", int, str(settings.FREE_MEMORY_MB)),
         "cpu_cores": _plan_resource("PRO", "CPU_CORES", float, str(settings.FREE_CPU_CORES)),
         "disk_mb": _plan_resource("PRO", "DISK_MB", int, str(settings.FREE_DISK_MB)),
+        "bandwidth_mbps": _plan_resource("PRO", "BANDWIDTH_MBPS", int, str(settings.FREE_BANDWIDTH_MBPS * 3)),
     },
     "plus": {
         "max_apps": int(os.getenv("PLUS_MAX_APPS", "5")),
@@ -143,6 +150,7 @@ PLANS: dict[str, dict] = {
         "memory_mb": _plan_resource("PLUS", "MEMORY_MB", int, "1024"),
         "cpu_cores": _plan_resource("PLUS", "CPU_CORES", float, "1.0"),
         "disk_mb": _plan_resource("PLUS", "DISK_MB", int, "8192"),
+        "bandwidth_mbps": _plan_resource("PLUS", "BANDWIDTH_MBPS", int, "100"),
     },
 }
 
