@@ -4,12 +4,32 @@
 {% block content %}
 <div class="card">
     <h1>{{ t('newapp.title') }}</h1>
-    <form method="post" action="/apps/new">
+    <form method="post" action="/apps/new" enctype="multipart/form-data">
         <label>{{ t('newapp.name_label') }}</label>
         <input type="text" name="name" placeholder="{{ t('newapp.name_placeholder') }}" required autofocus>
 
-        <label>{{ t('newapp.repo_label') }}</label>
-        <input type="text" name="repo_url" placeholder="https://github.com/user/my-bot" required>
+        <label>{{ t('newapp.source_label') }}</label>
+        <div class="source-type-switch">
+            <label class="source-type-option">
+                <input type="radio" name="source_type" value="git" checked>
+                {{ t('newapp.source_git') }}
+            </label>
+            <label class="source-type-option">
+                <input type="radio" name="source_type" value="zip">
+                {{ t('newapp.source_zip') }}
+            </label>
+        </div>
+
+        <div id="source-git-fields">
+            <label>{{ t('newapp.repo_label') }}</label>
+            <input type="text" name="repo_url" placeholder="https://github.com/user/my-bot">
+        </div>
+
+        <div id="source-zip-fields" hidden>
+            <label>{{ t('newapp.zip_label') }}</label>
+            <input type="file" name="zip_file" accept=".zip,application/zip">
+            <p class="hint">{{ t('newapp.zip_hint', max_mb=max_zip_mb) }}</p>
+        </div>
 
         <label>{{ t('newapp.reqfile_label') }}</label>
         <input type="text" name="requirements_file" value="requirements.txt">
@@ -30,4 +50,24 @@
         <button type="submit" class="btn-primary">{{ t('newapp.submit') }}</button>
     </form>
 </div>
+<script>
+(function () {
+    var radios = document.querySelectorAll('input[name="source_type"]');
+    var gitFields = document.getElementById('source-git-fields');
+    var zipFields = document.getElementById('source-zip-fields');
+    var repoInput = gitFields.querySelector('input[name="repo_url"]');
+    var zipInput = zipFields.querySelector('input[name="zip_file"]');
+
+    function sync() {
+        var isZip = document.querySelector('input[name="source_type"]:checked').value === "zip";
+        gitFields.hidden = isZip;
+        zipFields.hidden = !isZip;
+        repoInput.required = !isZip;
+        zipInput.required = isZip;
+    }
+
+    radios.forEach(function (r) { r.addEventListener('change', sync); });
+    sync();
+})();
+</script>
 {% endblock %}

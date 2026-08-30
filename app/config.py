@@ -28,8 +28,6 @@ class Settings:
     APPS_DIR: Path = Path(os.getenv("APPS_DIR", "./data/apps")).resolve()
     LOGS_DIR: Path = Path(os.getenv("LOGS_DIR", "./data/logs")).resolve()
 
-    TERMS_URL: str = os.getenv("TERMS_URL", "https://boss-server-bot.online/תקנון.html")
-
     FREE_MAX_APPS: int = int(os.getenv("FREE_MAX_APPS", "1"))
     FREE_MEMORY_MB: int = int(os.getenv("FREE_MEMORY_MB", "256"))
     FREE_CPU_CORES: float = float(os.getenv("FREE_CPU_CORES", "0.5"))
@@ -37,6 +35,11 @@ class Settings:
     # אחרי כמה ימים מההרשמה תוכנית חינמית מפסיקה לעבוד (אפליקציות נעצרות
     # ולא ניתנות להפעלה) עד שדרוג. 0 מבטל את המגבלה (חינם לצמיתות).
     FREE_TRIAL_DAYS: int = int(os.getenv("FREE_TRIAL_DAYS", "14"))
+
+    # מגבלת גודל קובץ zip שאפשר להעלות כמקור קוד (חלופה לריפו git) - נבדקת
+    # לפני שה-volume המוגבל-דיסק לפי תוכנית נוצר, אז זו הגנה נפרדת משלה
+    # (לא תלויה בתוכנית של המשתמש).
+    MAX_ZIP_UPLOAD_MB: int = int(os.getenv("MAX_ZIP_UPLOAD_MB", "200"))
 
     SANDBOX_NETWORK: str = os.getenv("SANDBOX_NETWORK", "serves_sandbox")
     SANDBOX_SUBNET: str = os.getenv("SANDBOX_SUBNET", "172.30.0.0/24")

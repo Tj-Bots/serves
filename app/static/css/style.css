@@ -49,9 +49,18 @@
     --terminal-text: #e8e2da;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html { overflow-x: hidden; }
+
+/* מסירים את המסגרת/הדגשה הכחולה שדפדפנים (בעיקר במובייל) מציגים בלחיצה
+   על כפתורים/קישורים, אבל שומרים אינדיקציה ברורה לניווט מקלדת
+   (:focus-visible) כדי לא לפגוע בנגישות. */
+a, button, input, textarea, select, summary { outline: none; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
 
 body {
     margin: 0;
@@ -212,6 +221,12 @@ a:hover { color: var(--accent-hover); }
 }
 
 .auth-card { max-width: 420px; margin: 48px auto; }
+
+.terms-page { max-width: 760px; margin: 0 auto; line-height: 1.7; }
+.terms-page h2 { margin-top: 28px; font-size: 1.05rem; color: var(--text); }
+.terms-page p { color: var(--text); font-size: 0.94rem; margin: 10px 0; }
+.terms-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.82rem; }
+.terms-back { margin-top: 14px; }
 
 .placeholder-card { max-width: 420px; margin: 80px auto; text-align: center; }
 .placeholder-brand {
@@ -413,6 +428,24 @@ button[type="submit"].btn-primary { margin-top: 16px; }
 .env-details summary .icon { transition: transform 0.15s ease; }
 .env-details[open] summary .icon { transform: rotate(180deg); }
 .env-details .env-details-body { padding: 0 14px 14px; }
+
+.source-type-switch { display: flex; gap: 10px; margin-bottom: 12px; }
+.source-type-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.source-type-option:has(input:checked) {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.source-type-option input { margin: 0; }
 
 /* ---------- Billing plan panels ---------- */
 

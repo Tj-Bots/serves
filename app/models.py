@@ -57,7 +57,10 @@ class BotApp(Base):
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     slug: Mapped[str | None] = mapped_column(String(140), unique=True, nullable=True, index=True)
-    repo_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    # "git" (repo_url מלא) או "zip" (repo_url ריק - הקוד הועלה כקובץ zip,
+    # ראו app/services/deploy.py ו-app_root_dir(id)/source.zip)
+    source_type: Mapped[str] = mapped_column(String(10), default="git")
+    repo_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     requirements_file: Mapped[str] = mapped_column(String(255), default="requirements.txt")
     run_command: Mapped[str] = mapped_column(String(500), nullable=False)
     env_vars: Mapped[dict] = mapped_column(JSON, default=dict)

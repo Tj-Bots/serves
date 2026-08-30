@@ -12,6 +12,7 @@ import os
 import shutil
 import subprocess
 import threading
+import zipfile
 from pathlib import Path
 
 from app.config import PLANS, settings
@@ -40,6 +41,30 @@ def app_code_dir(app_id: int) -> Path:
 
 def _disk_image_path(app_id: int) -> Path:
     return app_root_dir(app_id) / "disk.img"
+
+
+def source_zip_path(app_id: int) -> Path:
+    return app_root_dir(app_id) / "source.zip"
+
+
+def _extract_zip_safely(zip_path: Path, dest_dir: Path) -> None:
+    """מחלץ zip שהועלה ע"י המשתמש ל-dest_dir, עם הגנה מפני zip-slip
+    (חברים בארכיון עם '..' או נתיב מוחלט שיכולים לכתוב מחוץ ל-dest_dir)."""
+    with zipfile.ZipFile(zip_path) as zf:
+        for member in zf.infolist():
+            name = member.filename
+            if name.startswith("/") or ".." in Path(name).parts:
+                raise RuntimeError(f"zip file contains an unsafe path: {name}")
+        zf.extractall(dest_dir)
+
+    # אם כל התוכן ארוז בתיקיית-שורש יחידה (הפורמט הנפוץ של "Download ZIP"
+    # מגיטהאב), מרימים את התוכן שלה החוצה כדי ש-run_command יעבוד מהנתיב הצפוי
+    entries = list(dest_dir.iterdir())
+    if len(entries) == 1 and entries[0].is_dir():
+        wrapper = entries[0]
+        for item in wrapper.iterdir():
+            shutil.move(str(item), str(dest_dir / item.name))
+        wrapper.rmdir()
 
 
 def _ensure_app_volume(app_id: int, disk_mb: int) -> None:
@@ -205,6 +230,7 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         app.last_error = None
         db.commit()
 
+        source_type = app.source_type or "git"
         repo_url = app.repo_url
         requirements_file = (app.requirements_file or "requirements.txt").strip()
         run_command = app.run_command
@@ -221,19 +247,26 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
     code_dir = app_code_dir(app_id)
     try:
         _ensure_app_volume(app_id, resources["disk_mb"])
-        emit(f"[serves] cloning {repo_url} ...")
         _clear_dir_contents(code_dir)
 
-        result = subprocess.run(
-            ["git", "clone", "--depth", "1", repo_url, str(code_dir)],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        for out_line in (result.stdout + result.stderr).splitlines():
-            emit(out_line)
-        if result.returncode != 0:
-            raise RuntimeError("git clone failed - check that the repo link is public and correct")
+        if source_type == "zip":
+            zip_path = source_zip_path(app_id)
+            emit("[serves] extracting uploaded zip file ...")
+            if not zip_path.exists():
+                raise RuntimeError("no uploaded zip file found for this application")
+            _extract_zip_safely(zip_path, code_dir)
+        else:
+            emit(f"[serves] cloning {repo_url} ...")
+            result = subprocess.run(
+                ["git", "clone", "--depth", "1", repo_url, str(code_dir)],
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+            for out_line in (result.stdout + result.stderr).splitlines():
+                emit(out_line)
+            if result.returncode != 0:
+                raise RuntimeError("git clone failed - check that the repo link is public and correct")
 
         req_path = code_dir / requirements_file
         if req_path.exists():

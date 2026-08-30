@@ -5,7 +5,7 @@
 <div class="page-head">
     <div>
         <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span>{% if app.admin_suspended %} <span class="badge badge-failed">{{ t('appdetail.admin_suspended_badge') }}</span>{% endif %}</h1>
-        <div class="app-repo">{{ app.repo_url }}</div>
+        <div class="app-repo">{{ app.repo_url if app.source_type != 'zip' else t('appdetail.source_zip_label') }}</div>
         {% if app.admin_suspended %}
         <p class="muted">⛔ {{ t('appdetail.admin_suspended_message', reason=app.admin_suspend_reason or t('appdetail.admin_suspended_no_reason')) }}</p>
         {% endif %}
@@ -79,6 +79,17 @@
         <button type="submit" class="btn-primary">{{ t('appdetail.env_submit') }}</button>
     </form>
 </div>
+
+{% if app.source_type == 'zip' %}
+<div class="card">
+    <h2>{{ t('appdetail.zip_update_title') }}</h2>
+    <form method="post" action="/apps/{{ app.id }}/zip" enctype="multipart/form-data">
+        <input type="file" name="zip_file" accept=".zip,application/zip" required>
+        <p class="hint">{{ t('appdetail.zip_update_hint') }}</p>
+        <button type="submit" class="btn-primary">{{ t('appdetail.zip_update_submit') }}</button>
+    </form>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block body_end %}

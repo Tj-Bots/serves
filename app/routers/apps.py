@@ -1,6 +1,7 @@
 import asyncio
+import secrets
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -131,7 +132,27 @@ def new_app_form(request: Request, user: User = Depends(get_current_verified_use
     count = db.query(BotApp).filter(BotApp.user_id == user.id).count()
     if count >= max_apps:
         return _limit_reached_response(request, user, max_apps)
-    return render(request, "new_app.html", user=user)
+    return render(request, "new_app.html", user=user, max_zip_mb=settings.MAX_ZIP_UPLOAD_MB)
+
+
+async def _save_uploaded_zip(app_id: int, upload: UploadFile) -> None:
+    """שומר zip שהועלה ב-app_root_dir(app_id)/source.zip, בזרימה (בלי לטעון
+    הכל לזיכרון) ותוך אכיפת MAX_ZIP_UPLOAD_MB - זה קורה לפני שה-volume
+    המוגבל-דיסק לפי תוכנית נוצר (רק ב-deploy()), אז זו הגנת הגודל היחידה כאן."""
+    dest = deploy_service.source_zip_path(app_id)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    max_bytes = settings.MAX_ZIP_UPLOAD_MB * 1024 * 1024
+    written = 0
+    try:
+        with open(dest, "wb") as f:
+            while chunk := await upload.read(1024 * 1024):
+                written += len(chunk)
+                if written > max_bytes:
+                    raise RuntimeError("zip file too large")
+                f.write(chunk)
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
 
 
 @router.post("/apps/new")
@@ -139,7 +160,9 @@ async def create_app(
     request: Request,
     background_tasks: BackgroundTasks,
     name: str = Form(...),
-    repo_url: str = Form(...),
+    source_type: str = Form("git"),
+    repo_url: str = Form(""),
+    zip_file: UploadFile | None = File(None),
     requirements_file: str = Form("requirements.txt"),
     run_command: str = Form(...),
     env_text: str = Form(""),
@@ -158,13 +181,23 @@ async def create_app(
         return RedirectResponse("/apps/new", status_code=303)
 
     name = name.strip()
+    source_type = "zip" if source_type == "zip" else "git"
     repo_url = repo_url.strip()
     requirements_file = (requirements_file or "requirements.txt").strip() or "requirements.txt"
     run_command = run_command.strip()
 
-    if not name or not repo_url or not run_command:
+    if not name or not run_command:
         flash(request, "apps.flash.fill_all_fields", "error")
         return RedirectResponse("/apps/new", status_code=303)
+
+    if source_type == "git":
+        if not repo_url:
+            flash(request, "apps.flash.fill_all_fields", "error")
+            return RedirectResponse("/apps/new", status_code=303)
+    else:
+        if not zip_file or not zip_file.filename:
+            flash(request, "apps.flash.zip_required", "error")
+            return RedirectResponse("/apps/new", status_code=303)
 
     if db.query(BotApp).filter(func.lower(BotApp.name) == name.lower()).first():
         flash(request, "apps.flash.name_taken", "error")
@@ -179,7 +212,8 @@ async def create_app(
     app = BotApp(
         user_id=user.id,
         name=name,
-        repo_url=repo_url,
+        source_type=source_type,
+        repo_url=repo_url if source_type == "git" else "",
         requirements_file=requirements_file,
         run_command=run_command,
         env_vars=_parse_env_text(env_text),
@@ -189,12 +223,24 @@ async def create_app(
     db.commit()
     db.refresh(app)
 
+    # ה-slug כולל תמיד סיומת רנדומלית (לא מזהה עוקב כמו app.id) כדי שכתובות
+    # אפליקציות לא יהיו ניתנות לניחוש/סריקה ע"י מישהו שמנחש שמות אפליקציות.
     base_slug = slugify(name)
-    if base_slug in RESERVED_SLUGS or db.query(BotApp).filter(BotApp.slug == base_slug).first():
-        app.slug = f"{base_slug}-{app.id}"
+    for _ in range(5):
+        candidate = f"{base_slug}-{secrets.token_hex(3)}"
+        if candidate not in RESERVED_SLUGS and not db.query(BotApp).filter(BotApp.slug == candidate).first():
+            app.slug = candidate
+            break
     else:
-        app.slug = base_slug
+        app.slug = f"{base_slug}-{secrets.token_hex(6)}"
     db.commit()
+
+    if source_type == "zip":
+        try:
+            await _save_uploaded_zip(app.id, zip_file)
+        except Exception:
+            flash(request, "apps.flash.zip_too_large", "error")
+            return RedirectResponse(f"/apps/{app.id}", status_code=303)
 
     loop = asyncio.get_running_loop()
     background_tasks.add_task(deploy_service.deploy, app.id, loop)
@@ -203,12 +249,10 @@ async def create_app(
 
 
 def _app_public_url(app: BotApp) -> str:
-    slug = app.slug or app.id
-    base_domain = settings.APPS_BASE_DOMAIN
-    if base_domain:
-        scheme = "https" if settings.PUBLIC_BASE_URL.startswith("https") else "http"
-        return f"{scheme}://{slug}.{base_domain}/"
-    return f"/open/{slug}"
+    # תמיד נתיב תחת הדומיין הראשי (/open/<slug>) - לא סאב-דומיין, גם אם
+    # APPS_BASE_DOMAIN מוגדר (הוא עדיין קיים כתשתית, פשוט לא בשימוש כברירת
+    # מחדל יותר - עדיף כתובת אחת פשוטה שתמיד עובדת בלי תלות ב-DNS/SSL חיצוני).
+    return f"/open/{app.slug or app.id}"
 
 
 @router.get("/apps/{app_id}")
@@ -229,6 +273,29 @@ def _check_not_suspended(request: Request, app: BotApp) -> bool:
         flash(request, "apps.flash.admin_suspended", "error")
         return False
     return True
+
+
+@router.post("/apps/{app_id}/zip")
+async def update_zip(
+    request: Request,
+    app_id: int,
+    zip_file: UploadFile = File(...),
+    user: User = Depends(get_current_verified_user),
+    db: Session = Depends(get_db),
+):
+    app = _get_owned_app(db, user, app_id)
+    if app.source_type != "zip":
+        raise HTTPException(status_code=400, detail="This application is not zip-based")
+    if not zip_file.filename:
+        flash(request, "apps.flash.zip_required", "error")
+        return RedirectResponse(f"/apps/{app_id}", status_code=303)
+    try:
+        await _save_uploaded_zip(app_id, zip_file)
+    except Exception:
+        flash(request, "apps.flash.zip_too_large", "error")
+        return RedirectResponse(f"/apps/{app_id}", status_code=303)
+    flash(request, "apps.flash.zip_uploaded", "success")
+    return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 
 @router.post("/apps/{app_id}/redeploy")

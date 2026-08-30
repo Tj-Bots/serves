@@ -3,7 +3,6 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from app.config import settings
 from app.i18n import get_lang, t
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -27,7 +26,7 @@ def render(request: Request, name: str, status_code: int = 200, **context):
     context.update(
         request=request,
         flashes=flashes,
-        terms_url=settings.TERMS_URL,
+        terms_url="/terms",
         user=context.get("user"),
         lang=lang,
         dir=("rtl" if lang == "he" else "ltr"),

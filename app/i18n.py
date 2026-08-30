@@ -66,6 +66,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "account.flash.email_updated_verify": "האימייל עודכן. שלחנו קוד אימות חדש לכתובת החדשה.",
         "account.flash.account_deleted": "החשבון נמחק לצמיתות.",
         "footer.terms": "תקנון השירות",
+        "terms.title": "תקנון ותנאי שימוש",
         "footer.tagline": "· שרת בוטי טלגרם - תוכנית חינמית ללא הרשאות root",
         "auth.login.title": "התחברות",
         "form.email": "אימייל",
@@ -111,7 +112,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "newapp.title": "יצירת בוט טלגרם חדש",
         "newapp.name_label": "שם האפליקציה",
         "newapp.name_placeholder": "הבוט שלי",
+        "newapp.source_label": "מקור הקוד",
+        "newapp.source_git": "ריפו ב-GitHub",
+        "newapp.source_zip": "העלאת קובץ ZIP",
         "newapp.repo_label": "קישור לריפו ב-GitHub",
+        "newapp.zip_label": "קובץ ZIP",
+        "newapp.zip_hint": "יש להעלות קובץ zip עם קוד הבוט (עד {max_mb}MB). אם כל הקבצים ארוזים בתוך תיקייה יחידה, היא תיפתח אוטומטית.",
         "newapp.reqfile_label": "שם קובץ הספריות",
         "newapp.runcmd_label": "פקודת הרצה",
         "newapp.env_hint": "אחרי היצירה תוכל להגדיר משתני סביבה (כמו קובץ .env) מתוך עמוד האפליקציה.",
@@ -158,6 +164,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "apps.flash.limit_upgrade_hint": "הגעת למגבלת {max_apps} האפליקציות של התוכנית שלך. שדרג כדי ליצור עוד.",
         "apps.flash.limit": "התוכנית החינמית מוגבלת ל-{max_apps} אפליקציה.",
         "apps.flash.fill_all_fields": "יש למלא את כל השדות.",
+        "apps.flash.zip_required": "יש להעלות קובץ zip.",
+        "apps.flash.zip_too_large": "קובץ ה-zip גדול מדי או פגום. האפליקציה נוצרה אך יש להעלות קובץ מחדש ולפרוס.",
+        "apps.flash.zip_uploaded": "קובץ ה-zip הועלה. לחץ \"פריסה מחדש\" כדי שהעדכון ייכנס לתוקף.",
+        "appdetail.source_zip_label": "קובץ zip שהועלה",
+        "appdetail.zip_update_title": "עדכון קוד (zip)",
+        "appdetail.zip_update_hint": "העלאת קובץ zip חדש תחליף את הקוד הקיים. יש ללחוץ \"פריסה מחדש\" אחרי ההעלאה כדי שהעדכון ייכנס לתוקף.",
+        "appdetail.zip_update_submit": "העלאה",
         "apps.flash.name_taken": "השם הזה כבר תפוס ע\"י אפליקציה אחרת. נסה שם אחר.",
         "apps.flash.env_saved": "משתני הסביבה נשמרו. יש לבצע פריסה מחדש כדי שהשינוי ייכנס לתוקף.",
         "apps.flash.deploy_rate_limited": "יותר מדי פעולות פריסה בזמן קצר. נסה שוב בעוד דקה.",
@@ -243,6 +256,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "account.flash.email_updated_verify": "Email updated. We sent a new verification code to the new address.",
         "account.flash.account_deleted": "Your account has been permanently deleted.",
         "footer.terms": "Terms of Service",
+        "terms.title": "Terms of Service",
         "footer.tagline": "· Telegram bot hosting - free plan, no root access",
         "auth.login.title": "Log in",
         "form.email": "Email",
@@ -288,7 +302,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "newapp.title": "Create a new Telegram bot",
         "newapp.name_label": "App name",
         "newapp.name_placeholder": "My bot",
+        "newapp.source_label": "Code source",
+        "newapp.source_git": "GitHub repo",
+        "newapp.source_zip": "Upload a ZIP file",
         "newapp.repo_label": "GitHub repo URL",
+        "newapp.zip_label": "ZIP file",
+        "newapp.zip_hint": "Upload a zip file with your bot's code (up to {max_mb}MB). If everything is packed inside a single folder, it will be unwrapped automatically.",
         "newapp.reqfile_label": "Requirements file name",
         "newapp.runcmd_label": "Run command",
         "newapp.env_hint": "After creating the app you can set environment variables (like a .env file) from the app page.",
@@ -335,6 +354,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "apps.flash.limit_upgrade_hint": "You've reached your plan's limit of {max_apps} app(s). Upgrade to create more.",
         "apps.flash.limit": "The free plan is limited to {max_apps} app.",
         "apps.flash.fill_all_fields": "Please fill in all fields.",
+        "apps.flash.zip_required": "Please upload a zip file.",
+        "apps.flash.zip_too_large": "The zip file is too large or corrupted. The app was created, but you need to upload a file again and deploy.",
+        "apps.flash.zip_uploaded": "Zip file uploaded. Click \"Redeploy\" for the update to take effect.",
+        "appdetail.source_zip_label": "Uploaded zip file",
+        "appdetail.zip_update_title": "Update code (zip)",
+        "appdetail.zip_update_hint": "Uploading a new zip file will replace the existing code. Click \"Redeploy\" after uploading for the update to take effect.",
+        "appdetail.zip_update_submit": "Upload",
         "apps.flash.name_taken": "That name is already taken by another application. Try a different one.",
         "apps.flash.env_saved": "Environment variables saved. Redeploy for the change to take effect.",
         "apps.flash.deploy_rate_limited": "Too many deploy actions in a short time. Try again in a minute.",
@@ -361,9 +387,39 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
 }
 
 
+def _detect_browser_lang(request: Request) -> str:
+    """כשאין למשתמש בחירת שפה מפורשת בסשן, מנחשים לפי כותרת
+    Accept-Language של הדפדפן (מסודר לפי עדיפות q) - ואם שום שפה
+    נתמכת לא מופיעה שם, נופלים חזרה ל-DEFAULT_LANG."""
+    header = request.headers.get("accept-language", "")
+    if not header:
+        return DEFAULT_LANG
+    entries = []
+    for part in header.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if ";q=" in part:
+            tag, _, q = part.partition(";q=")
+            try:
+                q = float(q)
+            except ValueError:
+                q = 1.0
+        else:
+            tag, q = part, 1.0
+        entries.append((tag.strip().split("-")[0].lower(), q))
+    entries.sort(key=lambda pair: pair[1], reverse=True)
+    for tag, _ in entries:
+        if tag in SUPPORTED_LANGS:
+            return tag
+    return DEFAULT_LANG
+
+
 def get_lang(request: Request) -> str:
     lang = request.session.get("lang")
-    return lang if lang in SUPPORTED_LANGS else DEFAULT_LANG
+    if lang in SUPPORTED_LANGS:
+        return lang
+    return _detect_browser_lang(request)
 
 
 def t(lang: str, key: str, **kwargs) -> str:

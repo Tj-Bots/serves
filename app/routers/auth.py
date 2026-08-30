@@ -35,6 +35,11 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+@router.get("/terms")
+def terms_page(request: Request, db: Session = Depends(get_db)):
+    return render(request, "terms.html", user=get_optional_user(request, db))
+
+
 @router.get("/signup")
 def signup_form(request: Request, db: Session = Depends(get_db)):
     if get_optional_user(request, db):
