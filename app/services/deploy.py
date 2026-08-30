@@ -197,16 +197,17 @@ def _launch(
     env_vars: dict,
     resources: dict,
     emit,
+    use_dockerfile: bool = False,
 ) -> None:
     """מריץ קוד שכבר קיים בדיסק (משותף בין deploy() ל-start_app())."""
     _fix_ownership(code_dir)
 
     runtime.ensure_ready()
-    emit("[serves] installing dependencies and starting ...")
+    emit("[serves] building Dockerfile ..." if use_dockerfile else "[serves] installing dependencies and starting ...")
     handle = runtime.start(
         app_id, code_dir, requirements_file, run_command, env_vars,
         memory_mb=resources["memory_mb"], cpu_cores=resources["cpu_cores"],
-        bandwidth_mbps=resources["bandwidth_mbps"],
+        bandwidth_mbps=resources["bandwidth_mbps"], use_dockerfile=use_dockerfile,
     )
 
     _set_status(app_id, AppStatus.RUNNING, container_id=handle)
@@ -238,6 +239,8 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
 
         source_type = app.source_type or "git"
         repo_url = app.repo_url
+        branch = (app.branch or "").strip()
+        use_dockerfile = app.use_dockerfile
         requirements_file = (app.requirements_file or "requirements.txt").strip()
         run_command = app.run_command
         env_vars = dict(app.env_vars or {})
@@ -262,9 +265,13 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
                 raise RuntimeError("no uploaded zip file found for this application")
             _extract_zip_safely(zip_path, code_dir)
         else:
-            emit(f"[serves] cloning {repo_url} ...")
+            clone_cmd = ["git", "clone", "--depth", "1"]
+            if branch:
+                clone_cmd += ["--branch", branch]
+            clone_cmd += [repo_url, str(code_dir)]
+            emit(f"[serves] cloning {repo_url} (branch: {branch or 'default'}) ...")
             result = subprocess.run(
-                ["git", "clone", "--depth", "1", repo_url, str(code_dir)],
+                clone_cmd,
                 capture_output=True,
                 text=True,
                 timeout=180,
@@ -274,12 +281,19 @@ def deploy(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
             if result.returncode != 0:
                 raise RuntimeError("git clone failed - check that the repo link is public and correct")
 
-        req_path = code_dir / requirements_file
-        if req_path.exists():
-            check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
-        check_run_command(run_command)
+        if use_dockerfile:
+            # ב-Dockerfile מותאם-אישית אין requirements.txt/run_command לבדוק -
+            # ה-Dockerfile עצמו קובע איך בונים ומריצים (ראו הרחבה בתיעוד
+            # ב-DockerRuntime.start).
+            if not (code_dir / "Dockerfile").exists():
+                raise RuntimeError("No Dockerfile found at the root of the uploaded/cloned source")
+        else:
+            req_path = code_dir / requirements_file
+            if req_path.exists():
+                check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
+            check_run_command(run_command)
 
-        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit)
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit, use_dockerfile=use_dockerfile)
 
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
@@ -298,6 +312,7 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         app = db.get(BotApp, app_id)
         if not app:
             return
+        use_dockerfile = app.use_dockerfile
         requirements_file = (app.requirements_file or "requirements.txt").strip()
         run_command = app.run_command
         env_vars = dict(app.env_vars or {})
@@ -316,11 +331,15 @@ def start_app(app_id: int, loop: asyncio.AbstractEventLoop) -> None:
         _emit(app_id, loop, line)
 
     try:
-        req_path = code_dir / requirements_file
-        if req_path.exists():
-            check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
-        check_run_command(run_command)
-        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit)
+        if use_dockerfile:
+            if not (code_dir / "Dockerfile").exists():
+                raise RuntimeError("No Dockerfile found at the root of the uploaded/cloned source")
+        else:
+            req_path = code_dir / requirements_file
+            if req_path.exists():
+                check_requirements(req_path.read_text(encoding="utf-8", errors="replace"))
+            check_run_command(run_command)
+        _launch(app_id, loop, code_dir, requirements_file, run_command, env_vars, resources, emit, use_dockerfile=use_dockerfile)
     except PolicyViolation as exc:
         _set_status(app_id, AppStatus.FAILED, error=exc.message)
         emit(f"[serves] ERROR: {exc.message}")

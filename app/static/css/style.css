@@ -5,10 +5,10 @@
     --border: #262b31;
     --text: #f2f0ed;
     --muted: #96908b;
-    --accent: #ff5b2e;
-    --accent-2: #ffb020;
-    --accent-hover: #ff7a4d;
-    --accent-fg: #1a0900;
+    --accent: #3b82f6;
+    --accent-2: #06b6d4;
+    --accent-hover: #60a5fa;
+    --accent-fg: #041224;
     --danger: #f0453a;
     --danger-bg: rgba(240, 69, 58, 0.16);
     --warn: #f0a020;
@@ -31,10 +31,10 @@
     --border: #e6ddd4;
     --text: #241c16;
     --muted: #6e6259;
-    --accent: #e0501c;
-    --accent-2: #c9430f;
-    --accent-hover: #c9430f;
-    --accent-fg: #fff7f2;
+    --accent: #2563eb;
+    --accent-2: #0891b2;
+    --accent-hover: #1d4ed8;
+    --accent-fg: #f3f8ff;
     --danger: #d1332a;
     --danger-bg: rgba(209, 51, 42, 0.1);
     --warn: #a05a00;
@@ -446,6 +446,21 @@ button[type="submit"].btn-primary { margin-top: 16px; }
     background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .source-type-option input { margin: 0; }
+
+.wizard-step {
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.wizard-step:first-child { padding-top: 0; margin-top: 0; border-top: none; }
+.wizard-step-in { animation: wizard-step-in 0.25s ease; }
+@keyframes wizard-step-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.checkbox-option { display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
+.checkbox-option input { margin: 0; width: 16px; height: 16px; accent-color: var(--accent); }
 
 /* ---------- Billing plan panels ---------- */
 

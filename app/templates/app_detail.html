@@ -5,7 +5,7 @@
 <div class="page-head">
     <div>
         <h1>{{ app.name }} <span class="badge badge-{{ app.status.value }}" id="status-badge">{{ t('status.' ~ app.status.value) }}</span>{% if app.admin_suspended %} <span class="badge badge-failed">{{ t('appdetail.admin_suspended_badge') }}</span>{% endif %}</h1>
-        <div class="app-repo">{{ app.repo_url if app.source_type != 'zip' else t('appdetail.source_zip_label') }}</div>
+        <div class="app-repo">{{ app.repo_url if app.source_type != 'zip' else t('appdetail.source_zip_label') }}{% if app.source_type != 'zip' and app.branch %} <span class="muted">@ {{ app.branch }}</span>{% endif %}</div>
         {% if app.admin_suspended %}
         <p class="muted">⛔ {{ t('appdetail.admin_suspended_message', reason=app.admin_suspend_reason or t('appdetail.admin_suspended_no_reason')) }}</p>
         {% endif %}
@@ -68,10 +68,15 @@
 <div class="card">
     <h2>{{ t('appdetail.settings_title') }}</h2>
     <form method="post" action="/apps/{{ app.id }}/env">
+        {% if app.use_dockerfile %}
+        <label>{{ t('newapp.source_label') }}</label>
+        <input type="text" value="{{ t('newapp.use_dockerfile_badge') }}" disabled>
+        {% else %}
         <label>{{ t('newapp.reqfile_label') }}</label>
         <input type="text" value="{{ app.requirements_file }}" disabled>
         <label>{{ t('newapp.runcmd_label') }}</label>
         <input type="text" value="{{ app.run_command }}" disabled>
+        {% endif %}
 
         <label>{{ t('appdetail.env_label') }}</label>
         <textarea name="env_text" rows="6" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-...">{{ env_text }}</textarea>

@@ -1,8 +1,10 @@
 import asyncio
+import re
 import secrets
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -156,6 +158,46 @@ async def _save_uploaded_zip(app_id: int, upload: UploadFile) -> None:
         raise
 
 
+_GITHUB_REPO_RE = re.compile(r"^https?://github\.com/([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
+
+
+@router.get("/apps/branches")
+async def list_branches(repo_url: str, user: User = Depends(get_current_verified_user)):
+    """מחזיר את רשימת הענפים של ריפו ב-GitHub (ל-select בטופס יצירת
+    אפליקציה) - עובד רק לריפואים ציבוריים ב-github.com (ה-API הציבורי,
+    בלי אימות). לריפואים מ-hosts אחרים מחזיר רשימה ריקה - אפשר עדיין
+    להקליד שם ענף ידנית בטופס."""
+    match = _GITHUB_REPO_RE.match((repo_url or "").strip())
+    if not match:
+        return JSONResponse({"branches": []})
+    owner, repo = match.group(1), match.group(2)
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.get(
+                f"https://api.github.com/repos/{owner}/{repo}/branches",
+                params={"per_page": 100},
+                headers={"Accept": "application/vnd.github+json"},
+            )
+        if resp.status_code != 200:
+            return JSONResponse({"branches": []})
+        names = [b["name"] for b in resp.json() if isinstance(b, dict) and b.get("name")]
+        repo_info = await _fetch_default_branch(owner, repo)
+    except Exception:
+        return JSONResponse({"branches": []})
+    return JSONResponse({"branches": names, "default_branch": repo_info})
+
+
+async def _fetch_default_branch(owner: str, repo: str) -> str | None:
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.get(f"https://api.github.com/repos/{owner}/{repo}")
+        if resp.status_code == 200:
+            return resp.json().get("default_branch")
+    except Exception:
+        pass
+    return None
+
+
 @router.post("/apps/new")
 async def create_app(
     request: Request,
@@ -163,9 +205,11 @@ async def create_app(
     name: str = Form(...),
     source_type: str = Form("git"),
     repo_url: str = Form(""),
+    branch: str = Form(""),
     zip_file: UploadFile | None = File(None),
+    use_dockerfile: bool = Form(False),
     requirements_file: str = Form("requirements.txt"),
-    run_command: str = Form(...),
+    run_command: str = Form(""),
     env_text: str = Form(""),
     user: User = Depends(get_current_verified_user),
     db: Session = Depends(get_db),
@@ -184,10 +228,11 @@ async def create_app(
     name = name.strip()
     source_type = "zip" if source_type == "zip" else "git"
     repo_url = repo_url.strip()
+    branch = branch.strip()
     requirements_file = (requirements_file or "requirements.txt").strip() or "requirements.txt"
     run_command = run_command.strip()
 
-    if not name or not run_command:
+    if not name or (not use_dockerfile and not run_command):
         flash(request, "apps.flash.fill_all_fields", "error")
         return RedirectResponse("/apps/new", status_code=303)
 
@@ -204,19 +249,22 @@ async def create_app(
         flash(request, "apps.flash.name_taken", "error")
         return RedirectResponse("/apps/new", status_code=303)
 
-    try:
-        check_run_command(run_command)
-    except PolicyViolation as exc:
-        flash(request, exc.message, "error")
-        return RedirectResponse("/apps/new", status_code=303)
+    if not use_dockerfile:
+        try:
+            check_run_command(run_command)
+        except PolicyViolation as exc:
+            flash(request, exc.message, "error")
+            return RedirectResponse("/apps/new", status_code=303)
 
     app = BotApp(
         user_id=user.id,
         name=name,
         source_type=source_type,
         repo_url=repo_url if source_type == "git" else "",
+        branch=(branch if source_type == "git" else None) or None,
+        use_dockerfile=use_dockerfile,
         requirements_file=requirements_file,
-        run_command=run_command,
+        run_command="" if use_dockerfile else run_command,
         env_vars=_parse_env_text(env_text),
         status=AppStatus.PENDING,
     )

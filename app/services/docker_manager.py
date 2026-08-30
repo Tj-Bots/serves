@@ -43,7 +43,7 @@ class Runtime(abc.ABC):
     @abc.abstractmethod
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0, use_dockerfile: bool = False,
     ) -> str: ...
 
     @abc.abstractmethod
@@ -106,13 +106,12 @@ class DockerRuntime(Runtime):
 
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0, use_dockerfile: bool = False,
     ) -> str:
         import docker
 
         # code_dir הוא כבר mount point של loop device בגודל קבוע (נאכף
-        # ב-app/services/deploy.py::_ensure_app_volume) - ה-bind מטה
-        # פשוט חושף את מערכת הקבצים המוגבלת הזו לקונטיינר.
+        # ב-app/services/deploy.py::_ensure_app_volume).
         name = container_name(app_id)
         try:
             old = self.client.containers.get(name)
@@ -121,32 +120,50 @@ class DockerRuntime(Runtime):
             pass
 
         env = dict(env_vars or {})
-        env["REQUIREMENTS_FILE"] = requirements_file or "requirements.txt"
-        env["RUN_COMMAND"] = run_command
         # שמור - אם קוד המשתמש מריץ שרת אינטרנט, עליו להאזין כאן (על
         # 0.0.0.0) כדי שיהיה נגיש דרך /open/<id>. דורס כל PORT שהמשתמש
         # הגדיר בעצמו כדי שהפרוקסי תמיד ידע לאן לפנות.
         env["PORT"] = str(settings.APP_PORT)
 
-        container = self.client.containers.run(
-            settings.BASE_IMAGE,
+        run_kwargs = dict(
             name=name,
             detach=True,
-            working_dir="/app",
-            volumes={str(code_dir): {"bind": "/app", "mode": "rw"}},
             environment=env,
             network=settings.SANDBOX_NETWORK,
-            user="botuser",
             mem_limit=f"{memory_mb}m",
             memswap_limit=f"{memory_mb}m",
             nano_cpus=int(cpu_cores * 1_000_000_000),
             pids_limit=100,
             cap_drop=["ALL"],
             security_opt=["no-new-privileges:true"],
-            read_only=True,
-            tmpfs={"/tmp": "size=256m,uid=1000,gid=1000"},
             restart_policy={"Name": "no"},
         )
+
+        if use_dockerfile:
+            # מצב מתקדם: בונים תמונה משלה מה-Dockerfile שבשורש קוד המקור
+            # (במקום תמונת הבסיס המשותפת) - נועד למי שצריך חבילות מערכת
+            # שהתמונה המשותפת לא כוללת (למשל ffmpeg לצרכים לגיטימיים).
+            # שים לב: זו הרחבה מכוונת של המדיניות - Dockerfile מותאם-אישית
+            # לא נסרק ע"י security_policy.py (זה לא ישים ל-Dockerfile),
+            # וגם לא נאכף עליה read_only/uid קבוע כמו על תמונת הבסיס, כי
+            # תמונות מותאמות-אישית מנהלות את זה בעצמן. שאר ההגנות (ללא
+            # capabilities, ללא הרשאות חדשות, מגבלות משאבים, רשת מבודדת
+            # עם חסימת פורטי BitTorrent ב-iptables) עדיין נאכפות במלואן.
+            image_tag = f"serves-app-{app_id}:latest"
+            self.client.images.build(path=str(code_dir), tag=image_tag, rm=True)
+            container = self.client.containers.run(image_tag, **run_kwargs)
+        else:
+            env["REQUIREMENTS_FILE"] = requirements_file or "requirements.txt"
+            env["RUN_COMMAND"] = run_command
+            container = self.client.containers.run(
+                settings.BASE_IMAGE,
+                working_dir="/app",
+                volumes={str(code_dir): {"bind": "/app", "mode": "rw"}},
+                user="botuser",
+                read_only=True,
+                tmpfs={"/tmp": "size=256m,uid=1000,gid=1000"},
+                **run_kwargs,
+            )
 
         if bandwidth_mbps:
             from app.services import bandwidth
@@ -234,9 +251,14 @@ class LocalProcessRuntime(Runtime):
 
     def start(
         self, app_id: int, code_dir: Path, requirements_file: str, run_command: str, env_vars: dict,
-        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0,
+        memory_mb: int, cpu_cores: float, bandwidth_mbps: float = 0, use_dockerfile: bool = False,
     ) -> str:
         # DEV ONLY - memory_mb/cpu_cores/bandwidth_mbps לא נאכפים כאן, ראו אזהרת המחלקה למעלה.
+        if use_dockerfile:
+            raise RuntimeError(
+                "Dockerfile-based apps require real Docker (DISABLE_DOCKER must be off) - "
+                "not supported by the LocalProcessRuntime dev fallback."
+            )
         import os
 
         venv_dir = code_dir.parent / "venv"

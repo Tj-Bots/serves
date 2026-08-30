@@ -61,8 +61,13 @@ class BotApp(Base):
     # ראו app/services/deploy.py ו-app_root_dir(id)/source.zip)
     source_type: Mapped[str] = mapped_column(String(10), default="git")
     repo_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    branch: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # אם True - מתעלמים מ-requirements_file/run_command ובונים/מריצים
+    # Dockerfile שבשורש קוד המקור, במקום תמונת הבסיס המשותפת (ראו
+    # app/services/docker_manager.py::DockerRuntime.start).
+    use_dockerfile: Mapped[bool] = mapped_column(default=False)
     requirements_file: Mapped[str] = mapped_column(String(255), default="requirements.txt")
-    run_command: Mapped[str] = mapped_column(String(500), nullable=False)
+    run_command: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     env_vars: Mapped[dict] = mapped_column(JSON, default=dict)
 
     status: Mapped[AppStatus] = mapped_column(Enum(AppStatus), default=AppStatus.PENDING)

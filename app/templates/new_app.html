@@ -4,69 +4,166 @@
 {% block content %}
 <div class="card">
     <h1>{{ t('newapp.title') }}</h1>
-    <form method="post" action="/apps/new" enctype="multipart/form-data">
-        <label>{{ t('newapp.name_label') }}</label>
-        <input type="text" name="name" placeholder="{{ t('newapp.name_placeholder') }}" required autofocus>
-
-        <label>{{ t('newapp.source_label') }}</label>
-        <div class="source-type-switch">
-            <label class="source-type-option">
-                <input type="radio" name="source_type" value="git" checked>
-                {{ t('newapp.source_git') }}
-            </label>
-            <label class="source-type-option">
-                <input type="radio" name="source_type" value="zip">
-                {{ t('newapp.source_zip') }}
-            </label>
+    <form method="post" action="/apps/new" enctype="multipart/form-data" id="new-app-form">
+        <div class="wizard-step" id="step-name">
+            <label>{{ t('newapp.name_label') }}</label>
+            <input type="text" name="name" id="field-name" placeholder="{{ t('newapp.name_placeholder') }}" required autofocus>
         </div>
 
-        <div id="source-git-fields">
-            <label>{{ t('newapp.repo_label') }}</label>
-            <input type="text" name="repo_url" placeholder="https://github.com/user/my-bot">
-        </div>
-
-        <div id="source-zip-fields" hidden>
-            <label>{{ t('newapp.zip_label') }}</label>
-            <input type="file" name="zip_file" accept=".zip,application/zip">
-            <p class="hint">{{ t('newapp.zip_hint', max_mb=max_zip_mb) }}</p>
-        </div>
-
-        <label>{{ t('newapp.reqfile_label') }}</label>
-        <input type="text" name="requirements_file" value="requirements.txt">
-
-        <label>{{ t('newapp.runcmd_label') }}</label>
-        <input type="text" name="run_command" placeholder="python bot.py" required>
-
-        <details class="env-details">
-            <summary>{{ t('newapp.env_section_title') }} {{ icons.icon('chevron') }}</summary>
-            <div class="env-details-body">
-                <textarea name="env_text" rows="5" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-..."></textarea>
-                <p class="hint">{{ t('appdetail.env_hint') }}</p>
+        <div class="wizard-step" id="step-source" hidden>
+            <label>{{ t('newapp.source_label') }}</label>
+            <div class="source-type-switch">
+                <label class="source-type-option">
+                    <input type="radio" name="source_type" value="git" checked>
+                    {{ t('newapp.source_git') }}
+                </label>
+                <label class="source-type-option">
+                    <input type="radio" name="source_type" value="zip">
+                    {{ t('newapp.source_zip') }}
+                </label>
             </div>
-        </details>
 
-        <p class="hint" style="margin-top: 10px;">{{ t('newapp.env_hint') }}</p>
+            <div id="source-git-fields">
+                <label>{{ t('newapp.repo_label') }}</label>
+                <input type="text" name="repo_url" id="field-repo-url" placeholder="https://github.com/user/my-bot">
 
-        <button type="submit" class="btn-primary">{{ t('newapp.submit') }}</button>
+                <div id="branch-field" hidden>
+                    <label>{{ t('newapp.branch_label') }}</label>
+                    <input type="text" name="branch" id="branch-input" list="branch-options" placeholder="{{ t('newapp.branch_placeholder') }}">
+                    <datalist id="branch-options"></datalist>
+                    <p class="hint" id="branch-hint">{{ t('newapp.branch_hint') }}</p>
+                </div>
+            </div>
+
+            <div id="source-zip-fields" hidden>
+                <label>{{ t('newapp.zip_label') }}</label>
+                <input type="file" name="zip_file" id="field-zip" accept=".zip,application/zip">
+                <p class="hint">{{ t('newapp.zip_hint', max_mb=max_zip_mb) }}</p>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-dockerfile" hidden>
+            <label class="checkbox-option">
+                <input type="checkbox" name="use_dockerfile" id="field-use-dockerfile" value="true">
+                {{ t('newapp.use_dockerfile_label') }}
+            </label>
+            <p class="hint">{{ t('newapp.use_dockerfile_hint') }}</p>
+        </div>
+
+        <div class="wizard-step" id="step-run" hidden>
+            <label>{{ t('newapp.reqfile_label') }}</label>
+            <input type="text" name="requirements_file" id="field-reqfile" value="requirements.txt">
+
+            <label>{{ t('newapp.runcmd_label') }}</label>
+            <input type="text" name="run_command" id="field-runcmd" placeholder="python bot.py">
+        </div>
+
+        <div class="wizard-step" id="step-final" hidden>
+            <details class="env-details">
+                <summary>{{ t('newapp.env_section_title') }} {{ icons.icon('chevron') }}</summary>
+                <div class="env-details-body">
+                    <textarea name="env_text" rows="5" placeholder="TELEGRAM_BOT_TOKEN=123456:ABC-..."></textarea>
+                    <p class="hint">{{ t('appdetail.env_hint') }}</p>
+                </div>
+            </details>
+
+            <p class="hint" style="margin-top: 10px;">{{ t('newapp.env_hint') }}</p>
+
+            <button type="submit" class="btn-primary">{{ t('newapp.submit') }}</button>
+        </div>
     </form>
 </div>
 <script>
 (function () {
-    var radios = document.querySelectorAll('input[name="source_type"]');
+    var nameInput = document.getElementById('field-name');
+    var stepSource = document.getElementById('step-source');
+    var stepDockerfile = document.getElementById('step-dockerfile');
+    var stepRun = document.getElementById('step-run');
+    var stepFinal = document.getElementById('step-final');
+
     var gitFields = document.getElementById('source-git-fields');
     var zipFields = document.getElementById('source-zip-fields');
-    var repoInput = gitFields.querySelector('input[name="repo_url"]');
-    var zipInput = zipFields.querySelector('input[name="zip_file"]');
+    var repoInput = document.getElementById('field-repo-url');
+    var zipInput = document.getElementById('field-zip');
+    var branchField = document.getElementById('branch-field');
+    var branchInput = document.getElementById('branch-input');
+    var branchOptions = document.getElementById('branch-options');
 
-    function sync() {
-        var isZip = document.querySelector('input[name="source_type"]:checked').value === "zip";
-        gitFields.hidden = isZip;
-        zipFields.hidden = !isZip;
-        repoInput.required = !isZip;
-        zipInput.required = isZip;
+    var useDockerfile = document.getElementById('field-use-dockerfile');
+    var reqfileInput = document.getElementById('field-reqfile');
+    var runcmdInput = document.getElementById('field-runcmd');
+
+    function reveal(el) {
+        if (el.hidden) { el.hidden = false; el.classList.add('wizard-step-in'); }
     }
 
-    radios.forEach(function (r) { r.addEventListener('change', sync); });
+    function isZipMode() {
+        return document.querySelector('input[name="source_type"]:checked').value === "zip";
+    }
+
+    function sourceHasValue() {
+        return isZipMode() ? !!(zipInput.files && zipInput.files.length) : !!repoInput.value.trim();
+    }
+
+    var branchFetchTimer = null;
+    function fetchBranches() {
+        var repoUrl = repoInput.value.trim();
+        branchOptions.innerHTML = "";
+        if (!repoUrl) return;
+        clearTimeout(branchFetchTimer);
+        branchFetchTimer = setTimeout(function () {
+            fetch("/apps/branches?repo_url=" + encodeURIComponent(repoUrl))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.branches || !data.branches.length) return;
+                    branchOptions.innerHTML = "";
+                    data.branches.forEach(function (name) {
+                        var opt = document.createElement('option');
+                        opt.value = name;
+                        if (name === data.default_branch) opt.label = "{{ t('newapp.branch_default_suffix') }}";
+                        branchOptions.appendChild(opt);
+                    });
+                })
+                .catch(function () {});
+        }, 500);
+    }
+
+    function sync() {
+        var zipMode = isZipMode();
+        gitFields.hidden = zipMode;
+        zipFields.hidden = !zipMode;
+        repoInput.required = !zipMode;
+        zipInput.required = zipMode;
+        branchField.hidden = zipMode || !repoInput.value.trim();
+
+        if (nameInput.value.trim()) reveal(stepSource);
+        if (stepSource.hidden) return;
+
+        if (sourceHasValue()) reveal(stepDockerfile);
+        if (stepDockerfile.hidden) return;
+
+        if (useDockerfile.checked) {
+            stepRun.hidden = true;
+            runcmdInput.required = false;
+        } else {
+            reveal(stepRun);
+            runcmdInput.required = true;
+        }
+
+        var runReady = useDockerfile.checked || runcmdInput.value.trim();
+        if (runReady) reveal(stepFinal);
+        else stepFinal.hidden = true;
+    }
+
+    nameInput.addEventListener('input', sync);
+    document.querySelectorAll('input[name="source_type"]').forEach(function (r) {
+        r.addEventListener('change', sync);
+    });
+    repoInput.addEventListener('input', function () { fetchBranches(); sync(); });
+    zipInput.addEventListener('change', sync);
+    useDockerfile.addEventListener('change', sync);
+    runcmdInput.addEventListener('input', sync);
+
     sync();
 })();
 </script>
